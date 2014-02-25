@@ -64,6 +64,11 @@ public:
 	void close_alg(const std::string& name);	//выключить алгоритм
 	bool close_alg(const int& id);	//выключить алгоритм
 	void close_all_alg(void); //выключить все алгортмы
+	void get_count_queue(const std::string& name); //возвратить количество элементов в очереди
+	void set_task_in(const std::string nameAlg, const std::string& nameFile,
+			const int& num = WriteDataToFile::SIZE_P); //установить задание на запись данных входной очереди алгоритма
+	void set_task_out(const std::string nameAlg, const std::string& nameFile,
+			const int& num = WriteDataToFile::SIZE_P); //установить задание на запись данных выходной очереди алгоритма
 	Mad(const int& sock, void (*pf)(void*, size_t, int), ManagerAlg *m,
 			SinkAdcData *s);
 	Mad(const Mad&) = delete;

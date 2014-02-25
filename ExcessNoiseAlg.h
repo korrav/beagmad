@@ -20,7 +20,7 @@ namespace mad_n {
 class ExcessNoiseAlg: public Algorithm {
 	datA buf_;
 public:
-	void open_(void);
+	bool open_(void);
 	void excessNoise(void);
 	ExcessNoiseAlg(std::string name, const int& id,
 			void (*pf)(void*, size_t, int));

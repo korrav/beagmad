@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <string.h>
+#include "WriteDataToFile.h"
 
 using namespace std;
 using mad_n::Mad;
@@ -53,7 +54,7 @@ int main(int argc, char* argv[]) {
 	cout << "Создан объект класса Sender" << std::endl;
 	mad_n::SinkAdcData sink(DEV_SPI);
 	cout << "Создан объект класса SinkAdcData" << std::endl;
-	mad_n::ManagerAlg manager(&sink);
+	mad_n::ManagerAlg manager(&sink, mad_n::Sender::pass);
 	cout << "Создан объект класса ManagerAlg" << std::endl;
 	Mad mad(sock, mad_n::Sender::pass, &manager, &sink);
 	cout << "Создан объект класса Mad" << std::endl;
@@ -125,7 +126,26 @@ void hand_command_line(Mad& mad) {
 			mad.close_alg(mes);
 		} else if (mes == "close_aa")
 			mad.close_all_alg();
-		else
+		else if (mes == "writin") {
+			int num = mad_n::WriteDataToFile::SIZE_P;
+			string nAlg, nFile;
+			message >> nAlg >> nFile;
+			message >> mes;
+			if (mes != "p")
+				num = stoi(mes);
+			mad.set_task_in(nAlg, nFile, num);
+		} else if (mes == "writout") {
+			int num = mad_n::WriteDataToFile::SIZE_P;
+			string nAlg, nFile;
+			message >> nAlg >> nFile;
+			message >> mes;
+			if (mes != "p")
+				num = stoi(mes);
+			mad.set_task_out(nAlg, nFile, num);
+		} else if (mes == "n_elem") {
+			message >> mes;
+			mad.get_count_queue(mes);
+		} else
 			cout << "Передана неизвестная команда\n";
 	}
 	message.clear();

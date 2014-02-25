@@ -294,6 +294,40 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 	}
 }
 
+void Mad::set_task_in(const std::string nameAlg, const std::string& nameFile,
+		const int& num) {
+	if (nameAlg == "sink")
+		sinkAdc_->set_task_in(nameFile, num);
+	else
+		manager_->set_task_in(nameAlg, nameFile, num);
+	return;
+}
+
+void Mad::set_task_out(const std::string nameAlg, const std::string& nameFile,
+		const int& num) {
+	if (nameAlg == "sink") {
+		std::cout
+				<< "Для потока приёмника данных от АЦП не предусмотрена возможность записи выходных данных\n";
+		return;
+	} else
+		manager_->set_task_out(nameAlg, nameFile, num);
+	return;
+}
+
+void Mad::get_count_queue(const std::string& name) {
+	if (name == "sink")
+		std::cout
+				<< "В выходной очереди потока приёмника данных от АЦП находится "
+				<< (sinkAdc_->get_count_queue()) << " элементов\n";
+	else {
+		int num = manager_->get_count_queue(name);
+		if (num != -1)
+			std::cout << "во входной очереди " << " алгоритма " << name
+					<< " находится " << num << " элементов\n";
+	}
+	return;
+}
+
 Mad::Mad(const int& sock, void (*pf)(void*, size_t, int), ManagerAlg *m,
 		SinkAdcData *s) :
 		sock_(sock), isRunThreadAdc_(false), isRunThreadTest_(false), pass_(pf), manager_(
@@ -354,7 +388,7 @@ bool Mad::start_adc(void) {
 	}
 	buf = START_ADC;
 	if (write(f3_i2c_, &buf, 1) == 1) {
-		std::cout << "Передан приказ о запуск АЦП преобразования\n";
+		std::cout << "Передан приказ о запуске АЦП преобразования\n";
 		isRunThreadAdc_ = true;
 		status = true;
 	} else

@@ -19,9 +19,27 @@
 #include "DataADC.h"
 #include "SinkAdcData.h"
 #include "Algorithm.h"
+#include <chrono>
 
 namespace mad_n {
-
+class Monitor {
+	int rms_[4]; 	//СКО
+	int mean_[4];	//математическое ожидание
+	mutable std::mutex mut_; //блокирует обращение к статистике
+	void set_statistics(const int* rms, const int* mean); //установить статистику
+	const int AMOUNT_AN = 100000; //количество отсчётов, которое учитывается при расчёте статистики
+	std::chrono::steady_clock::time_point transferTime_; //время передачи мониторограммы на БЦ
+	std::chrono::seconds periodTransfer_ = std::chrono::seconds(300); //значение периода передачи мониторограмм
+	monitorogramm bufM_; //буфер, содержащий мониторограмму, предназначенную для передачи на БЦ
+	void (*pass_)(void* pbuf, size_t size, int id_block);
+public:
+	void get_statistics(int* rms, int* mean) const; //получить статистику
+	void calculation_stats(const DataADC& bData);	//вычислить статистику
+	Monitor(void (*pf)(void*, size_t, int));
+	~Monitor() {
+		mut_.unlock();
+	}
+};
 /*
  *
  */
@@ -34,6 +52,7 @@ class ManagerAlg {
 	void openDistributor(void); //открытие потока-распределителя
 	void closeDistributor(void); //закрытие потока-распределителя
 	void distributor(void); //поток - распределитель данных между активными алгоритмами
+	Monitor monitor_; //объект расчёта мониторограмм
 public:
 	bool addAlgorithm(Algorithm* a); //добавление алгоритма в набор алгоритмов менеджера алгоритмов
 	bool turnOn(const std::string& alg); //включить алгоритм
@@ -41,7 +60,12 @@ public:
 	bool turnOff(const std::string& alg); //выключить алгоритм
 	bool turnOff(const int& alg); //выключить алгоритм
 	void turnOffAll(void); //выключить все действующие алгоритмы
-	explicit ManagerAlg(SinkAdcData* s);
+	void set_task_in(const std::string nameAlg, const std::string& nameFile,
+			const int& num = WriteDataToFile::SIZE_P); //установить задание на запись данных входной очереди алгоритма
+	void set_task_out(const std::string nameAlg, const std::string& nameFile,
+			const int& num = WriteDataToFile::SIZE_P); //установить задание на запись данных выходной очереди алгоритма
+	int get_count_queue(const std::string& name); //возвратить количество элементов в очереди
+	ManagerAlg(SinkAdcData* s, void (*pf)(void*, size_t, int));
 	virtual ~ManagerAlg();
 };
 

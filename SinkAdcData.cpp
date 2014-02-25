@@ -56,6 +56,7 @@ void SinkAdcData::main(void) {
 		}
 		d->set_gain(gain_);
 		d->set_freq(freq_);
+		wdtIn_.write(d->get_data(), d->get_amount() * 4 * sizeof(short));
 		mut_.lock();
 		fifo_.push_back(std::unique_ptr<DataADC>(d));
 		isEmpty_.notify_one();
@@ -88,6 +89,25 @@ void SinkAdcData::set_freq(const int& f) {
 
 int SinkAdcData::get_freq(void) {
 	return freq_;
+}
+
+void SinkAdcData::set_task_in(const std::string& nameFile, const int& num) {
+	if (isRunThread_) {
+		bool status = wdtIn_.set_task(nameFile, num);
+		std::cout << "Для потока приёмника данных от АЦП"
+				<< (status ? " создано " : " не возможно создать ")
+				<< "задание на запись входных данных\n";
+	} else
+		std::cout << "Поток приёмника данных от АЦП " << " сейчас неактивен\n";
+	return;
+}
+
+int SinkAdcData::get_count_queue(void) {
+	int num = 0;
+	mut_.lock();
+	num = fifo_.size();
+	mut_.unlock();
+	return num;
 }
 
 SinkAdcData::~SinkAdcData() {

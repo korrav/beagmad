@@ -27,18 +27,26 @@ ContinueAlg::ContinueAlg(std::string name, const int& id,
 
 }
 
-void ContinueAlg::open_(void) {
+bool ContinueAlg::open_(void) {
+	if (check_valid_therad()) {
+		std::cout << "Алгоритм " << get_name() << " уже запущен\n";
+		return false;
+	}
 	Algorithm::open__();
 	end_ = std::async(std::launch::async, &ContinueAlg::continious, this);
-	return;
+	return true;
 }
 
 void ContinueAlg::continious(void) {
 	DataADC d;
+	std::shared_ptr<const DataADC> pd;
 	for (;;) {
 		if (!check_valid_therad())
 			break;
-		d = *pop_fifo();
+		pd = pop_fifo();
+		if (pd == nullptr)
+			continue;
+		d = *pd;
 		buf_.freq = d.get_freq();
 		d.get_gain(buf_.gain);
 		buf_.numFirstCount = d.get_first();

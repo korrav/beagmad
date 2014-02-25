@@ -35,6 +35,7 @@ void Sender::pass(void* pbuf, size_t size, int id_block) {
 	memcpy(package + sizeof(head), pbuf, size);
 	sendto(sock_, package, sizeof(h_package) + size, 0,
 			reinterpret_cast<sockaddr*>(&addrBag_), sizeof(addrBag_));
+	delete [] package;
 	return;
 }
 

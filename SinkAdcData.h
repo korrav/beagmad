@@ -18,6 +18,7 @@
 #include <memory>
 #include <algorithm>
 #include "DataADC.h"
+#include "WriteDataToFile.h"
 
 namespace mad_n {
 
@@ -34,16 +35,19 @@ class SinkAdcData {
 	std::condition_variable isEmpty_; //условная переменная, используемая при проверке пуста ли очередь блоков АЦП
 	short gain_[4]; //текущие коэффициенты усиления
 	int freq_; //частота дискретизации(в Гц)
+	WriteDataToFile wdtIn_; // объект обеспечивающий запись входных данных
 
 	void openMain(void); //открытие главного потока
 	void closeMain(void); //закрытие главного потока
 	void main(void); //главный поток объекта
 public:
 	std::shared_ptr<DataADC> obtainData(void);
+	int get_count_queue(void); //возвратить количество элементов в очереди
 	void set_gain(short* g); //установка коэффициентов усиления каналов
 	void get_gain(short* g); //получение коэффициентов усиления каналов
 	void set_freq(const int& f); //установка частоты дискретизации
 	int get_freq(void); //получение частоты дискретизации
+	void set_task_in(const std::string& nameFile, const int& num);
 	SinkAdcData(const char* dev);
 	virtual ~SinkAdcData();
 };

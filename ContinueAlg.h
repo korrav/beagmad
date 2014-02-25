@@ -22,7 +22,7 @@ class ContinueAlg: public Algorithm {
 	unsigned int numberOfSampl_; //количество отсчётов в одном пакете
 	datA buf_;
 public:
-	void open_(void);
+	bool open_(void);
 	void continious(void);
 	ContinueAlg(std::string name, const int& id, void (*pf)(void*, size_t, int), unsigned num = 1000);
 	virtual ~ContinueAlg();

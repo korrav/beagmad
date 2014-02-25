@@ -10,8 +10,8 @@
 
 namespace mad_n {
 
-ManagerAlg::ManagerAlg(SinkAdcData* s) :
-		supplier_(s) {
+ManagerAlg::ManagerAlg(SinkAdcData* s, void (*pf)(void*, size_t, int)) :
+		supplier_(s), monitor_(pf) {
 	if (supplier_ == nullptr) {
 		std::cout << "Поставщик буферов данных не инициализирован\n";
 		exit(1);
@@ -38,14 +38,14 @@ void ManagerAlg::closeDistributor(void) {
 bool ManagerAlg::addAlgorithm(Algorithm* a) {
 	bool status = setA_.insert(std::make_pair(a->get_name(), a)).second;
 	std::cout << "В менеджере алгоритмов " << (status ? "" : "не ")
-			<< "установлен агоритм " << a->get_name() << std::endl;
+			<< "установлен алгоритм " << a->get_name() << std::endl;
 	return status;
 }
 
 bool ManagerAlg::turnOn(const std::string& alg) {
 	if (setA_.count(alg)) {
-		setA_[alg]->open_();
-		std::cout << "Включен алгоритм " << alg << std::endl;
+		if (setA_[alg]->open_())
+			std::cout << "Включен алгоритм " << alg << std::endl;
 		return true;
 	} else {
 		std::cout << "Алгоритма " << alg << " нет в пуле менеджера алгоритмов"
@@ -93,6 +93,7 @@ void ManagerAlg::distributor(void) {
 		pd = supplier_->obtainData();
 		if (pd == nullptr)
 			continue;
+		monitor_.calculation_stats(*pd);
 		for (auto palg = setA_.begin(); palg != setA_.end(); palg++) {
 			if (palg->second->check_valid_therad())
 				palg->second->push_fifo(pd);
@@ -108,8 +109,102 @@ void ManagerAlg::turnOffAll(void) {
 	return;
 }
 
+void ManagerAlg::set_task_in(const std::string nameAlg,
+		const std::string& nameFile, const int& num) {
+	if (setA_.count(nameAlg))
+		setA_[nameAlg]->set_task_in(nameFile, num);
+	else
+		std::cout << "Алгоритма " << nameAlg << " не существует\n";
+	return;
+}
+
+void ManagerAlg::set_task_out(const std::string nameAlg,
+		const std::string& nameFile, const int& num) {
+	if (setA_.count(nameAlg))
+		setA_[nameAlg]->set_task_out(nameFile, num);
+	else
+		std::cout << "Алгоритма " << nameAlg << " не существует\n";
+	return;
+}
+
+int ManagerAlg::get_count_queue(const std::string& name) {
+	int num = 0;
+	if (setA_.count(name))
+		num = setA_[name]->get_count_queue();
+	else {
+		std::cout << "Алгоритма " << name << " не существует\n";
+		return -1;
+	}
+	return num;
+}
+
 ManagerAlg::~ManagerAlg() {
 	closeDistributor();
+	return;
+}
+
+void Monitor::set_statistics(const int* rms, const int* mean) {
+	std::lock_guard<std::mutex> lk(mut_);
+	for (int i = 0; i < 4; i++) {
+		rms_[i] = rms[i];
+		mean_[i] = mean[i];
+	}
+	return;
+}
+
+void Monitor::get_statistics(int* rms, int* mean) const {
+	std::lock_guard<std::mutex> lk(mut_);
+	for (int i = 0; i < 4; i++) {
+		rms[i] = rms_[i];
+		mean[i] = mean_[i];
+	}
+	return;
+}
+
+void Monitor::calculation_stats(const DataADC& bData) {
+	const short *pbuf = reinterpret_cast<short *>(bData.get_data());
+	static int num_sampl_monitorogram = 0; // количество отсчётов, уже учтённых при при вычисление текущей статистики
+	static double sum[4] = { 0, 0, 0, 0 }; //сумма выборок
+	static long double sumsquares[4] = { 0, 0, 0, 0 }; //сумма квадратов выборок
+	//вычисление суммы значений отсчётов и суммы квадратов значений отсчётов
+	unsigned int amount = bData.get_amount();
+	for (unsigned int i = 0; i < amount; i++) { //интерации по отсчётам
+		for (int j = 0; j < 4; j++) { //интерации по каналам
+			sum[j] += pbuf[4 * i + j];
+			sumsquares[j] += pow(static_cast<double>(pbuf[4 * i + j]), 2);
+		}
+		num_sampl_monitorogram++;
+		//вычисление мат. ожидания и СКО
+		if (num_sampl_monitorogram > AMOUNT_AN) {
+			int mean[4];
+			int rms[4];
+			for (int k = 0; k < 4; k++) {
+				mean[k] = sum[k] / AMOUNT_AN;
+				rms[k] = sqrt(
+						(sumsquares[k] - pow(sum[k], 2) / AMOUNT_AN)
+								/ (AMOUNT_AN - 1));
+			}
+			for (int k = 0; k < 4; k++) {
+				sum[k] = 0;
+				sumsquares[k] = 0;
+			}
+			set_statistics(rms, mean);
+			num_sampl_monitorogram = 0;
+		}
+	}
+	if (std::chrono::steady_clock::now() >= transferTime_) {
+		transferTime_ += periodTransfer_;
+		bufM_.freq = bData.get_freq();
+		bData.get_gain(bufM_.gain);
+		get_statistics(bufM_.rms, bufM_.mean);
+		pass_(&bufM_, sizeof(bufM_), MONITOR);
+	}
+	return;
+}
+
+Monitor::Monitor(void (*pf)(void*, size_t, int)) :
+		pass_(pf) {
+	transferTime_ = std::chrono::steady_clock::now() + periodTransfer_;
 	return;
 }
 
