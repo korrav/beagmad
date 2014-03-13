@@ -34,6 +34,8 @@ class Monitor {
 	monitorogramm bufM_; //буфер, содержащий мониторограмму, предназначенную для передачи на БЦ
 	void (*pass_)(void* pbuf, size_t size, int id_block);
 public:
+	void set_period(const unsigned int& s); //установить период передачи мониторограмм
+	unsigned int get_period(void); //получить период передачи мониторограмм
 	void get_statistics(int* rms, int* mean) const; //получить статистику
 	void calculation_stats(const DataADC& bData);	//вычислить статистику
 	Monitor(void (*pf)(void*, size_t, int));
@@ -53,8 +55,8 @@ class ManagerAlg {
 	void openDistributor(void); //открытие потока-распределителя
 	void closeDistributor(void); //закрытие потока-распределителя
 	void distributor(void); //поток - распределитель данных между активными алгоритмами
-	Monitor monitor_; //объект расчёта мониторограмм
 public:
+	Monitor monitor_; //объект расчёта мониторограмм
 	void get_active_algorithm(std::list<std::string>* pls, std::list<int>* pli); //получить наименования и идентификаторы активных алгоритмов
 	bool addAlgorithm(Algorithm* a); //добавление алгоритма в набор алгоритмов менеджера алгоритмов
 	void get_rms(int* prms); //получить текущее значение rms
@@ -72,6 +74,15 @@ public:
 	ManagerAlg(SinkAdcData* s, void (*pf)(void*, size_t, int));
 	virtual ~ManagerAlg();
 };
+
+inline void Monitor::set_period(const unsigned int& s) {
+	periodTransfer_ = std::chrono::seconds(s);
+	return;
+}
+
+inline unsigned int Monitor::get_period(void) {
+	return periodTransfer_.count();
+}
 
 } /* namespace mad_n */
 

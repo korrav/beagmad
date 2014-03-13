@@ -356,6 +356,24 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 			answer.status = NOT_OK;
 		pass_(&answer, sizeof(answer), ANSWER);
 		break;
+	case SET_PERIOD_MONITOR:
+		if (len_com != 2 * sizeof(int))
+			break;
+		set_period_monitor(arg[0]);
+		answer.status = OK;
+		pass_(&answer, sizeof(answer), ANSWER);
+		break;
+	case GET_PERIOD_MONITOR:
+		if (len_com != sizeof(int))
+			break;
+		char *compl_answer = new char[sizeof(answer) + sizeof(unsigned int)];
+		reinterpret_cast<h_pack_ans*>(compl_answer)->id = answer.id;
+		reinterpret_cast<h_pack_ans*>(compl_answer)->status = OK;
+		unsigned int* param = reinterpret_cast<unsigned int*>(compl_answer
+				+ sizeof(h_pack_ans));
+		*param = get_period_monitor();
+		pass_(compl_answer, sizeof(answer) + sizeof(unsigned int), ANSWER);
+		break;
 	}
 }
 
@@ -473,5 +491,14 @@ bool Mad::start_adc(void) {
 		std::cout
 				<< "Приказ о запуске АЦП преобразования передать не удалось\n";
 	return status;
+}
+
+void Mad::set_period_monitor(const unsigned& s) {
+	manager_->monitor_.set_period(s);
+	return;
+}
+
+unsigned int Mad::get_period_monitor(void) {
+	return manager_->monitor_.get_period();
 }
 } /* namespace mad_n */

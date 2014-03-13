@@ -31,6 +31,8 @@ class Mad {
 		CLOSE_ALL_ALG, //закрыть все действующие алгоритмы
 		GET_AC, //получить информацию о действующих в данный момент алгоритмах
 		SYNC, //синхронизация АЦП
+		SET_PERIOD_MONITOR, //установить период передачи мониторограмм
+		GET_PERIOD_MONITOR, //получить период передачи мониторограмм
 		/*специализированные команды*/
 		//алгоритм gas
 		SET_SIGMA, //установить коэффициент превышения шума
@@ -57,6 +59,8 @@ class Mad {
 	ManagerAlg *manager_;	//менеджер алгоритмов
 	SinkAdcData *sinkAdc_;	//приёмник данных от АЦП
 public:
+	void set_period_monitor(const unsigned& s); //установить период передачи мониторограмм
+	unsigned int get_period_monitor(void); //получить период передачи мониторограмм
 	void receive(const unsigned int& len, void* pbuf); //обработка принятых по Ethernet данных
 	bool sync(void); //отправка синхросигнала в драйвер АЦП
 	bool start_adc(void); //запуск АЦП преобразования

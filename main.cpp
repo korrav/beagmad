@@ -176,6 +176,13 @@ void hand_command_line(Mad& mad) {
 			std::cout << "На данный момент " << algorithms << std::endl;
 		} else if (mes == "en_wb_noise")
 			mad.algExN_->enable_write_full_block();
+		else if (mes == "s_p_m") {
+			message >> mes;
+			unsigned int second = static_cast<unsigned>(stoi(mes));
+			mad.set_period_monitor(second);
+		} else if (mes == "g_p_m")
+			std::cout << "Период передачи мониторограмм на БЦ составляет "
+					<< mad.get_period_monitor() << " секунд\n";
 		else
 			cout << "Передана неизвестная команда\n";
 	}
