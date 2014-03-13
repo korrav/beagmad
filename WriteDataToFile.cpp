@@ -23,7 +23,7 @@ bool WriteDataToFile::set_task(const std::string& nameFile, const int& num) {
 		std::cout << "Нет возможности создать файл " << nameFile << std::endl;
 		return false;
 	} else {
-		numSampl_ = count_ = num;
+		numSampl_ = count_ = num * sizeof(short) * 4;
 		nameFile_ = nameFile;
 		isWrite_ = true;
 	}
@@ -54,7 +54,7 @@ void WriteDataToFile::write(void* pbuf, const size_t& size) {
 			file_.write(reinterpret_cast<char*>(pbuf), num);
 			if ((count_ -= num) <= 0) {
 				std::cout << "В файл " << nameFile_ << " записано " << numSampl_
-						<< " отсчётов\n";
+						<< " байтов\n";
 				closeWriteFile();
 			}
 
