@@ -35,7 +35,15 @@ enum i2c_id {
 #define IOCTL_READ_REGISTERS _IO(ID_IO_F3_SPI, 5)
 
 namespace mad_n {
-
+bool Mad::sync(void) {
+	bool status = true;
+	if (ioctl(f3_spi_, IOCTL_ADC_SYNC) < 0) {
+		std::cout
+				<< "Не удалось передать команду IOCTL_ADC_START в драйвер f3_spi\n";
+		status = false;
+	}
+	return status;
+}
 bool Mad::stop_adc(void) {
 	bool status = false;
 	if (!isRunThreadAdc_) {
@@ -126,11 +134,11 @@ bool Mad::set_gain(int* gain) {
 	int N = 0;
 	for (int i = 1; i < 5; i++) {
 		if (gain[i - 1] == GAIN_)
-			buf[5 - i] = 0;
+			buf[i] = 0;
 		else if (gain[i - 1] >= GAIN_ + 9 && gain[i - 1] <= GAIN_ + 60) {
 			N = (gain[i - 1] - GAIN_ - 6) / 3;
 			gain[i - 1] = GAIN_ + 6 + 3 * N;
-			buf[5 - i] = 6 + 3 * N;
+			buf[i] = N;
 		} else
 			return status;
 	}
@@ -291,6 +299,63 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 		answer.status = OK;
 		pass_(&answer, sizeof(answer), ANSWER);
 		break;
+	case SET_SIGMA:
+		if (len_com != 2 * sizeof(int))
+			break;
+		algExN_->set_sigma(*arg);
+		answer.status = OK;
+		pass_(&answer, sizeof(answer), ANSWER);
+		break;
+	case SET_PB:
+		if (len_com != 3 * sizeof(int))
+			break;
+		if (algExN_->set_parameter_block(arg[0], arg[1]))
+			answer.status = OK;
+		else
+			answer.status = NOT_OK;
+		pass_(&answer, sizeof(answer), ANSWER);
+		break;
+
+	case GET_PB: {
+		if (len_com != sizeof(int))
+			break;
+		char *compl_answer = new char[sizeof(answer) + 2 * sizeof(int)];
+		reinterpret_cast<h_pack_ans*>(compl_answer)->id = answer.id;
+		unsigned int* param = reinterpret_cast<unsigned int*>(compl_answer
+				+ sizeof(h_pack_ans));
+		if (algExN_->get_parameter_block(param, param + 1))
+			reinterpret_cast<h_pack_ans*>(compl_answer)->status = OK;
+		else
+			reinterpret_cast<h_pack_ans*>(compl_answer)->status = NOT_OK;
+		pass_(compl_answer, sizeof(answer) + 2 * sizeof(int), ANSWER);
+		delete[] compl_answer;
+	}
+		break;
+	case GET_AC: {
+		if (len_com != sizeof(int))
+			break;
+		std::list<int> l;
+		get_list_active_algoritm(&l);
+		char *compl_answer = new char[sizeof(answer) + l.size() * sizeof(int)];
+		reinterpret_cast<h_pack_ans*>(compl_answer)->id = answer.id;
+		reinterpret_cast<h_pack_ans*>(compl_answer)->status = OK;
+		int* param = reinterpret_cast<int*>(compl_answer + sizeof(h_pack_ans));
+		auto pl = l.begin();
+		for (unsigned int i = 0; i < l.size(); i++, pl++)
+			param[i] = *pl;
+
+		pass_(compl_answer, sizeof(answer) + l.size() * sizeof(int), ANSWER);
+	}
+		break;
+	case SYNC:
+		if (len_com != sizeof(int))
+			break;
+		if (sync())
+			answer.status = OK;
+		else
+			answer.status = NOT_OK;
+		pass_(&answer, sizeof(answer), ANSWER);
+		break;
 	}
 }
 
@@ -328,6 +393,16 @@ void Mad::get_count_queue(const std::string& name) {
 	return;
 }
 
+void Mad::get_list_active_algoritm(std::list<std::string>* la) {
+	manager_->get_active_algorithm(la, nullptr);
+	return;
+}
+
+void Mad::get_list_active_algoritm(std::list<int>* la) {
+	manager_->get_active_algorithm(nullptr, la);
+	return;
+}
+
 Mad::Mad(const int& sock, void (*pf)(void*, size_t, int), ManagerAlg *m,
 		SinkAdcData *s) :
 		sock_(sock), isRunThreadAdc_(false), isRunThreadTest_(false), pass_(pf), manager_(
@@ -351,9 +426,12 @@ Mad::Mad(const int& sock, void (*pf)(void*, size_t, int), ManagerAlg *m,
 	sinkAdc_->set_freq(FREQ_);
 	short gain[4] = { GAIN_, GAIN_, GAIN_, GAIN_ };
 	sinkAdc_->set_gain(gain);
-	//добавление алгортмов в менеджер
+//добавление алгоритмов в менеджер
 	algCont_ = new ContinueAlg(name_alg_[CONTINIOUS], CONTINIOUS, pass_);
 	manager_->addAlgorithm(algCont_);
+	algExN_ = new ExcessNoiseAlg(name_alg_[GASIK], GASIK, pass_, manager_);
+	manager_->addAlgorithm(algExN_);
+	return;
 }
 
 Mad::~Mad() {

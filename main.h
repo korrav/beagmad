@@ -8,7 +8,7 @@
 #ifndef MAIN_H_
 #define MAIN_H_
 
-#define BAG_ADDR	"192.168.203.30"
+#define BAG_ADDR	"192.168.100.21"
 #define BAG_PORT	30000
 #define MAD_PORT	30000
 #define MAX_SIZE_SAMPL_SEND 4100 //определяет длину буфера передачи сокета

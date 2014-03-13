@@ -20,14 +20,15 @@ DataADC::DataADC() {
 DataADC& DataADC::operator =(const DataADC& data) {
 	if (this == &data)
 		return *this;
-	for(int i = 0; i < 4; i++)
+	for (int i = 0; i < 4; i++)
 		gain_[i] = data.gain_[i];
 	freq_ = data.freq_;
 	b_adc_.error = data.b_adc_.error;
 	b_adc_.mode = data.b_adc_.mode;
 	b_adc_.amountCount = data.b_adc_.amountCount;
 	b_adc_.count = data.b_adc_.count;
-	delete[] b_adc_.pUnit;
+	if (b_adc_.pUnit)
+		delete[] b_adc_.pUnit;
 	b_adc_.pUnit = new short[b_adc_.amountCount * 4];
 	for (unsigned int i = 0; i < 4 * b_adc_.amountCount; i++)
 		b_adc_.pUnit[i] = data.b_adc_.pUnit[i];

@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <iostream>
+#include <exception>
 
 namespace mad_n {
 
@@ -44,8 +45,12 @@ void SinkAdcData::main(void) {
 	for (;;) {
 		if (!isRunThread_)
 			break;
-		if (d == nullptr)
-			d = new DataADC;
+		try {
+			if (d == nullptr)
+				d = new DataADC;
+		} catch (std::exception& e) {
+			continue;
+		}
 		if (ioctl(f_adc_, IOCTL_ADC_GET_MESSAGE, d->get_to_adc_driver()) < 0) {
 			std::cout << "Приём данных от f3 окончился неудачей\n";
 			continue;

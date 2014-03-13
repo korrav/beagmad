@@ -80,10 +80,10 @@ int main(int argc, char* argv[]) {
 		if (FD_ISSET(sock, &fdin)) {
 			sockaddr_in srcAddr;
 			size_t size = sizeof(srcAddr);
-			unsigned len = recvfrom(sock, reinterpret_cast<void *>(&recBuf),
+			unsigned len = recvfrom(sock, reinterpret_cast<void *>(recBuf),
 					sizeof(recBuf), 0, reinterpret_cast<sockaddr*>(&srcAddr),
 					&size);
-			mad.receive(len, &recBuf);
+			mad.receive(len, recBuf);
 		}
 	}
 	return 0;
@@ -145,7 +145,38 @@ void hand_command_line(Mad& mad) {
 		} else if (mes == "n_elem") {
 			message >> mes;
 			mad.get_count_queue(mes);
-		} else
+		} else if (mes == "set_sigma") {
+			message >> mes;
+			int num = stoi(mes);
+			mad.algExN_->set_sigma(num);
+		} else if (mes == "set_par_b") {
+			message >> mes;
+			unsigned int bef = stoi(mes) * 4;
+			message >> mes;
+			unsigned int aft = stoi(mes) * 4;
+			if (!mad.algExN_->set_parameter_block(bef, aft))
+				std::cout
+						<< "Не удалось установить новые параметры пакета, передаваеого в режиме Гасик\n";
+		} else if (mes == "get_par_b") {
+			unsigned int bef, aft;
+			if (mad.algExN_->get_parameter_block(&bef, &aft))
+				cout << "Параметры блока данных алгоритма "
+						<< mad.algExN_->get_name()
+						<< " : количество отсчётов до события = " << bef / 4
+						<< " после события = " << aft / 4 << std::endl;
+		} else if (mes == "get_ac") {
+			list<std::string> listA;
+			std::string algorithms = "неактивен ни один алгортм";
+			mad.get_list_active_algoritm(&listA);
+			if (!listA.empty()) {
+				algorithms.clear();
+				for (std::string& name : listA)
+					algorithms += name + " ";
+			}
+			std::cout << "На данный момент " << algorithms << std::endl;
+		} else if (mes == "en_wb_noise")
+			mad.algExN_->enable_write_full_block();
+		else
 			cout << "Передана неизвестная команда\n";
 	}
 	message.clear();

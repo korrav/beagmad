@@ -21,8 +21,8 @@ class DataADC {
 	int freq_; //частота дискретизации(в Гц)
 public:
 	DataADC& operator =(const DataADC&);
-	inline short* get_buf(void);
-	inline unsigned int get_first(void);
+	inline short* get_buf(void) const;
+	inline unsigned int get_first(void) const;
 	inline unsigned int get_amount(void) const;
 	inline void set_amount(unsigned int amount);
 	inline void set_amount_init(void);
@@ -37,11 +37,11 @@ public:
 	virtual ~DataADC();
 };
 
-inline short *DataADC::get_buf(void) {
+inline short *DataADC::get_buf(void) const {
 	return b_adc_.pUnit;
 }
 
-unsigned int DataADC::get_first(void) {
+unsigned int DataADC::get_first(void) const{
 	return b_adc_.count;
 }
 

@@ -20,6 +20,7 @@
 #include "SinkAdcData.h"
 #include "Algorithm.h"
 #include <chrono>
+#include <list>
 
 namespace mad_n {
 class Monitor {
@@ -29,7 +30,7 @@ class Monitor {
 	void set_statistics(const int* rms, const int* mean); //установить статистику
 	const int AMOUNT_AN = 100000; //количество отсчётов, которое учитывается при расчёте статистики
 	std::chrono::steady_clock::time_point transferTime_; //время передачи мониторограммы на БЦ
-	std::chrono::seconds periodTransfer_ = std::chrono::seconds(300); //значение периода передачи мониторограмм
+	std::chrono::seconds periodTransfer_ = std::chrono::seconds(60); //значение периода передачи мониторограмм
 	monitorogramm bufM_; //буфер, содержащий мониторограмму, предназначенную для передачи на БЦ
 	void (*pass_)(void* pbuf, size_t size, int id_block);
 public:
@@ -54,7 +55,10 @@ class ManagerAlg {
 	void distributor(void); //поток - распределитель данных между активными алгоритмами
 	Monitor monitor_; //объект расчёта мониторограмм
 public:
+	void get_active_algorithm(std::list<std::string>* pls, std::list<int>* pli); //получить наименования и идентификаторы активных алгоритмов
 	bool addAlgorithm(Algorithm* a); //добавление алгоритма в набор алгоритмов менеджера алгоритмов
+	void get_rms(int* prms); //получить текущее значение rms
+	void get_mean(int* pmean); //получить текущее значение математического ожидания
 	bool turnOn(const std::string& alg); //включить алгоритм
 	bool turnOn(const int& alg); //включить алгоритм
 	bool turnOff(const std::string& alg); //выключить алгоритм

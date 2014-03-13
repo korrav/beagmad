@@ -10,8 +10,10 @@
 #include "ManagerAlg.h"
 #include "SinkAdcData.h"
 #include "ContinueAlg.h"
+#include "ExcessNoiseAlg.h"
 #include "main.h"
 #include <string>
+#include <list>
 namespace mad_n {
 /*
  *
@@ -26,15 +28,22 @@ class Mad {
 		ID_STOP_TEST, //завершить тестирование драйвера АЦП
 		OPEN_ALG, //запустить алгоритм
 		CLOSE_ALG, //остановить алгоритм
-		CLOSE_ALL_ALG //закрыть все действующие алгоритмы
+		CLOSE_ALL_ALG, //закрыть все действующие алгоритмы
+		GET_AC, //получить информацию о действующих в данный момент алгоритмах
+		SYNC, //синхронизация АЦП
+		/*специализированные команды*/
+		//алгоритм gas
+		SET_SIGMA, //установить коэффициент превышения шума
+		SET_PB, //установить параметры блока данных, передаваемого на БЦ
+		GET_PB, //получить параметры блока данных, передаваемого на БЦ
 	};
 	enum status_ans {
 		NOT_OK, OK
 	};
 	enum id_alg {
-		CONTINIOUS = 0
+		CONTINIOUS = 0, GASIK
 	};
-	const std::string name_alg_[2] = { "cont", "alg1" };
+	const std::string name_alg_[2] = { "cont", "gas" };
 	int sock_; //ethernet socket
 	int f3_i2c_; //дескриптор файла управления акустической платой
 	int f3_spi_; //дескриптор файла приёма данных от акустической платы
@@ -47,10 +56,9 @@ class Mad {
 	void (*pass_)(void* pbuf, size_t size, int id_block); //функция передачи данных
 	ManagerAlg *manager_;	//менеджер алгоритмов
 	SinkAdcData *sinkAdc_;	//приёмник данных от АЦП
-	//алгоритмы
-	ContinueAlg *algCont_; //алгоритм непрерывной передачи данных
 public:
 	void receive(const unsigned int& len, void* pbuf); //обработка принятых по Ethernet данных
+	bool sync(void); //отправка синхросигнала в драйвер АЦП
 	bool start_adc(void); //запуск АЦП преобразования
 	bool stop_adc(void); //остановка АЦП преобразования
 	bool start_test(void); //запуск тестового преобразования
@@ -69,11 +77,16 @@ public:
 			const int& num = WriteDataToFile::SIZE_P); //установить задание на запись данных входной очереди алгоритма
 	void set_task_out(const std::string nameAlg, const std::string& nameFile,
 			const int& num = WriteDataToFile::SIZE_P); //установить задание на запись данных выходной очереди алгоритма
+	void get_list_active_algoritm(std::list<std::string> *la); //получить список активных алгоритмов
+	void get_list_active_algoritm(std::list<int> *la); //получить список активных алгоритмов
 	Mad(const int& sock, void (*pf)(void*, size_t, int), ManagerAlg *m,
 			SinkAdcData *s);
 	Mad(const Mad&) = delete;
 	Mad& operator =(const Mad&) = delete;
 	virtual ~Mad();
+//алгоритмы
+	ContinueAlg *algCont_; //алгоритм непрерывной передачи данных
+	ExcessNoiseAlg *algExN_; //алгоритм по превышению уровня шумов
 };
 
 } /* namespace mad_n */

@@ -138,6 +138,16 @@ int ManagerAlg::get_count_queue(const std::string& name) {
 	return num;
 }
 
+void ManagerAlg::get_rms(int *prms) {
+	monitor_.get_statistics(prms, nullptr);
+	return;
+}
+
+void ManagerAlg::get_mean(int* pmean) {
+	monitor_.get_statistics(nullptr, pmean);
+	return;
+}
+
 ManagerAlg::~ManagerAlg() {
 	closeDistributor();
 	return;
@@ -145,18 +155,24 @@ ManagerAlg::~ManagerAlg() {
 
 void Monitor::set_statistics(const int* rms, const int* mean) {
 	std::lock_guard<std::mutex> lk(mut_);
-	for (int i = 0; i < 4; i++) {
-		rms_[i] = rms[i];
-		mean_[i] = mean[i];
-	}
+	if (mean)
+		for (int i = 0; i < 4; i++)
+			mean_[i] = mean[i];
+	if (rms)
+		for (int i = 0; i < 4; i++)
+			rms_[i] = rms[i];
 	return;
 }
 
 void Monitor::get_statistics(int* rms, int* mean) const {
 	std::lock_guard<std::mutex> lk(mut_);
-	for (int i = 0; i < 4; i++) {
-		rms[i] = rms_[i];
-		mean[i] = mean_[i];
+	if (rms != nullptr) {
+		for (int i = 0; i < 4; i++)
+			rms[i] = rms_[i];
+	}
+	if (mean != nullptr) {
+		for (int i = 0; i < 4; i++)
+			mean[i] = mean_[i];
 	}
 	return;
 }
@@ -168,7 +184,7 @@ void Monitor::calculation_stats(const DataADC& bData) {
 	static long double sumsquares[4] = { 0, 0, 0, 0 }; //сумма квадратов выборок
 	//вычисление суммы значений отсчётов и суммы квадратов значений отсчётов
 	unsigned int amount = bData.get_amount();
-	for (unsigned int i = 0; i < amount; i++) { //интерации по отсчётам
+	for (unsigned int i = 0; i < amount; i = i + 4) { //интерации по отсчётам
 		for (int j = 0; j < 4; j++) { //интерации по каналам
 			sum[j] += pbuf[4 * i + j];
 			sumsquares[j] += pow(static_cast<double>(pbuf[4 * i + j]), 2);
@@ -208,5 +224,21 @@ Monitor::Monitor(void (*pf)(void*, size_t, int)) :
 	return;
 }
 
-} /* namespace mad_n */
+void ManagerAlg::get_active_algorithm(std::list<std::string>* pls,
+		std::list<int>* pli) {
+	if (pls != nullptr)
+		for (auto& a : setA_) {
+			if (a.second->check_valid_therad()) {
+				pls->push_back(a.first);
+			}
+		}
+	if (pli != nullptr)
+		for (auto& a : setA_) {
+			if (a.second->check_valid_therad()) {
+				pli->push_back(a.second->get_id());
+			}
+		}
+	return;
+}
 
+} /* namespace mad_n */
