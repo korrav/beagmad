@@ -49,6 +49,7 @@ public:
 			const unsigned int& after); //установить параметры блока данных, передаваемого на БЦ
 	bool get_parameter_block(unsigned int *bef, unsigned int *after) const; //получить параметры блока данных, передаваемого на БЦ
 	void set_sigma(const short& s); //установить коэффициент превышения шума
+	int get_sigma(void) const; //получить коэффициент превышения шума
 	bool open_(void);
 	void excessNoise(void);
 	ExcessNoiseAlg(std::string name, const int& id,
@@ -63,6 +64,10 @@ inline void ExcessNoiseAlg::set_sigma(const short & s) {
 	}
 	sigma_ = s;
 	return;
+}
+
+inline int ExcessNoiseAlg::get_sigma(void) const {
+	return sigma_;
 }
 
 inline bool ExcessNoiseAlg::set_parameter_block(const unsigned int& bef,

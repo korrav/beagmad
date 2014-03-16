@@ -23,7 +23,10 @@ bool WriteDataToFile::set_task(const std::string& nameFile, const int& num) {
 		std::cout << "Нет возможности создать файл " << nameFile << std::endl;
 		return false;
 	} else {
-		numSampl_ = count_ = num * sizeof(short) * 4;
+		if (num == SIZE_P)
+			numSampl_ = SIZE_P;
+		else
+			numSampl_ = count_ = num * sizeof(short) * 4;
 		nameFile_ = nameFile;
 		isWrite_ = true;
 	}

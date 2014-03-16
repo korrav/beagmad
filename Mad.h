@@ -36,6 +36,7 @@ class Mad {
 		/*специализированные команды*/
 		//алгоритм gas
 		SET_SIGMA, //установить коэффициент превышения шума
+		GET_SIGMA, //получить текущее занчение коэффициента превышение шума
 		SET_PB, //установить параметры блока данных, передаваемого на БЦ
 		GET_PB, //получить параметры блока данных, передаваемого на БЦ
 	};
@@ -58,7 +59,9 @@ class Mad {
 	void (*pass_)(void* pbuf, size_t size, int id_block); //функция передачи данных
 	ManagerAlg *manager_;	//менеджер алгоритмов
 	SinkAdcData *sinkAdc_;	//приёмник данных от АЦП
+	void clear_set_overload(void); //подтверждение приёма сообщения о перегрузке pga
 public:
+	void post_overload(void); //сообщение МАД о перегрузке pga
 	void set_period_monitor(const unsigned& s); //установить период передачи мониторограмм
 	unsigned int get_period_monitor(void); //получить период передачи мониторограмм
 	void receive(const unsigned int& len, void* pbuf); //обработка принятых по Ethernet данных

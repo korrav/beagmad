@@ -18,7 +18,14 @@
 #include <iostream>
 
 enum i2c_id {
-	START_ADC, STOP_ADC, SET_GAIN, START_SPI0, START_SPI1, START_TEST, STOP_TEST
+	START_ADC,
+	STOP_ADC,
+	SET_GAIN,
+	START_SPI0,
+	START_SPI1,
+	START_TEST,
+	STOP_TEST,
+	CLEAR_SET_OVERLOAD
 };
 
 //КОМАНДЫ IOCTL
@@ -43,6 +50,14 @@ bool Mad::sync(void) {
 		status = false;
 	}
 	return status;
+}
+
+void Mad::clear_set_overload(void) {
+	char buf = CLEAR_SET_OVERLOAD;
+	if (write(f3_i2c_, &buf, 1) != 1)
+		std::cout
+				<< "Приказ о подтверждении приёма сообщения о перегрузке pga передать не удалось\n";
+	return;
 }
 bool Mad::stop_adc(void) {
 	bool status = false;
@@ -363,7 +378,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 		answer.status = OK;
 		pass_(&answer, sizeof(answer), ANSWER);
 		break;
-	case GET_PERIOD_MONITOR:
+	case GET_PERIOD_MONITOR: {
 		if (len_com != sizeof(int))
 			break;
 		char *compl_answer = new char[sizeof(answer) + sizeof(unsigned int)];
@@ -373,6 +388,19 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 				+ sizeof(h_pack_ans));
 		*param = get_period_monitor();
 		pass_(compl_answer, sizeof(answer) + sizeof(unsigned int), ANSWER);
+	}
+		break;
+	case GET_SIGMA: {
+		if (len_com != sizeof(int))
+			break;
+		char *compl_answer = new char[sizeof(answer) + sizeof(int)];
+		reinterpret_cast<h_pack_ans*>(compl_answer)->id = answer.id;
+		reinterpret_cast<h_pack_ans*>(compl_answer)->status = OK;
+		int* param = reinterpret_cast<int*>(compl_answer
+				+ sizeof(h_pack_ans));
+		*param = algExN_->get_sigma();
+		pass_(compl_answer, sizeof(answer) + sizeof(int), ANSWER);
+	}
 		break;
 	}
 }
@@ -418,6 +446,15 @@ void Mad::get_list_active_algoritm(std::list<std::string>* la) {
 
 void Mad::get_list_active_algoritm(std::list<int>* la) {
 	manager_->get_active_algorithm(nullptr, la);
+	return;
+}
+
+void Mad::post_overload(void) {
+	int buf[4] = { 34, 34, 34, 34 };
+	std::cout
+			<< "Произошла перегрузка питания усилителей PGA. Выполняется принудительное обнуление коэффициентов усиления\n";
+	set_gain(buf);
+	clear_set_overload();
 	return;
 }
 

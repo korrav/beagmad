@@ -15,6 +15,8 @@
 #include <errno.h>
 #include <string.h>
 #include "WriteDataToFile.h"
+#include "gpio_overload.h"
+#include "sys/poll.h"
 
 using namespace std;
 using mad_n::Mad;
@@ -50,6 +52,10 @@ int main(int argc, char* argv[]) {
 				<< sizeSend << " байт\n";
 		return 1;
 	}
+	//открытие файла цифрового ввода, сигнализирующего о перегрузке pga
+	int fd_over = open_file_gpio_overload();
+	if (fd_over < 0)
+		return 1;
 	mad_n::Sender sender(sock, BAG_ADDR, BAG_PORT, atoi(argv[1]));
 	cout << "Создан объект класса Sender" << std::endl;
 	mad_n::SinkAdcData sink(DEV_SPI);
@@ -58,26 +64,36 @@ int main(int argc, char* argv[]) {
 	cout << "Создан объект класса ManagerAlg" << std::endl;
 	Mad mad(sock, mad_n::Sender::pass, &manager, &sink);
 	cout << "Создан объект класса Mad" << std::endl;
-	fd_set fdin; //набор дескрипторов, на которых ожидаются входные данные
-	int status = 0;
 
+	int status = 0;
+	pollfd fds[3];
+	fds[0].fd = STDIN_FILENO;
+	fds[0].events = POLLIN;
+	fds[1].fd = sock;
+	fds[1].events = POLLIN;
+	fds[2].fd = fd_over;
+	fds[2].events = POLLPRI;
+	char buf[2];
+	read(fd_over, buf, 2);
 	for (;;) {
-		FD_ZERO(&fdin);
-		FD_SET(STDIN_FILENO, &fdin);
-		FD_SET(sock, &fdin);
 		//ожидание событий
-		status = select(sock + 1, &fdin, NULL, NULL, NULL);
-		if (status == -1) {
+		status = poll(fds, 3, -1);
+		if (status < 0) {
 			if (errno == EINTR)
 				continue;
 			else {
-				perror("Функция select завершилась крахом\n");
+				perror("Функция poll завершилась крахом\n");
 				exit(1);
 			}
 		}
-		if (FD_ISSET(STDIN_FILENO, &fdin))
+		if (fds[0].revents & POLLIN)
 			hand_command_line(mad);
-		if (FD_ISSET(sock, &fdin)) {
+		if (fds[2].revents & POLLPRI) {
+			mad.post_overload();
+			char buf[2];
+			read(fd_over, buf, 2);
+		}
+		if (fds[1].revents & POLLIN) {
 			sockaddr_in srcAddr;
 			size_t size = sizeof(srcAddr);
 			unsigned len = recvfrom(sock, reinterpret_cast<void *>(recBuf),
@@ -176,13 +192,16 @@ void hand_command_line(Mad& mad) {
 			std::cout << "На данный момент " << algorithms << std::endl;
 		} else if (mes == "en_wb_noise")
 			mad.algExN_->enable_write_full_block();
-		else if (mes == "s_p_m") {
+		else if (mes == "set_p_dm") {
 			message >> mes;
 			unsigned int second = static_cast<unsigned>(stoi(mes));
 			mad.set_period_monitor(second);
-		} else if (mes == "g_p_m")
+		} else if (mes == "get_p_dm")
 			std::cout << "Период передачи мониторограмм на БЦ составляет "
 					<< mad.get_period_monitor() << " секунд\n";
+		else if (mes == "get_sigma")
+			std::cout << "Коэфициент превышения порога шума равен "
+					<< mad.algExN_->get_sigma() << std::endl;
 		else
 			cout << "Передана неизвестная команда\n";
 	}
