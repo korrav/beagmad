@@ -58,10 +58,6 @@ public:
 };
 
 inline void ExcessNoiseAlg::set_sigma(const short & s) {
-	if (!check_valid_therad()) {
-		std::cout << " Алгоритм " << get_name() << " не активен\n";
-		return;
-	}
 	sigma_ = s;
 	return;
 }
