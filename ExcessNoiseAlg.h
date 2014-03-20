@@ -25,7 +25,7 @@ class ExcessNoiseAlg: public Algorithm {
 	class excep_out_of_algorithm { //класс, используемый для выходя из главной функции алгоритма
 	};
 	unsigned int numFirstCount_; //номер первого отсчёта в приёмном буфере
-	datA buf_;
+	datAfilterNoise buf_;
 	const unsigned int INIT_BEFORE_EVENT = 100; //начальное значение параметра количество отсчётов до события
 	const unsigned int INIT_AFTER_EVENT = 1800; //начальное значение параметра количество отсчётов до события
 	const short INIT_SIGMA = 6; //начальное значение параметра количество отсчётов до события
@@ -73,8 +73,6 @@ inline int ExcessNoiseAlg::get_sigma(void) const {
 inline bool ExcessNoiseAlg::set_parameter_block(const unsigned int& bef,
 		const unsigned int& after) {
 	std::lock_guard<std::mutex> lk(mutBefAf_);
-	if (bef + after > NUM_SAMPL_PACK)
-		return false;
 	beforeEvent_ = bef;
 	afterEvent_ = after;
 	return true;

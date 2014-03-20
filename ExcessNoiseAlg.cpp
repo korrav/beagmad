@@ -87,11 +87,9 @@ void ExcessNoiseAlg::increase_size_buf(std::vector<short>& buf,
 		unsigned int size) {
 	excep_out_of_algorithm out;
 	pd_ = nullptr;
-	int index = 0;
 	while (buf.size() < size) {
 		pd_ = pop_fifo();
 		if (pd_ != nullptr) {
-			index = buf.size() / 4;
 			buf.insert(buf.end(), pd_->get_buf(),
 					pd_->get_buf() + pd_->get_amount() * 4);
 		}
@@ -99,7 +97,8 @@ void ExcessNoiseAlg::increase_size_buf(std::vector<short>& buf,
 			throw out;
 	}
 	if (pd_ != nullptr) {
-		numFirstCount_ = (pd_->get_first() - index) / 4;
+		numFirstCount_ = pd_->get_first()
+				- (buf.size() / 4 - pd_->get_amount());
 		buf_.freq = pd_->get_freq();
 		pd_->get_gain(buf_.gain);
 	}
@@ -109,12 +108,27 @@ void ExcessNoiseAlg::increase_size_buf(std::vector<short>& buf,
 
 void ExcessNoiseAlg::transfer_data(std::vector<short>& v,
 		const std::vector<short>::iterator& cur, const unsigned &num_sampl) {
-	std::copy(cur, cur + num_sampl, buf_.sampl);
+	std::vector<short>::iterator pt = cur, end = cur + num_sampl;
+	int trans = 0;
+	int count = 0;
 	buf_.amountCount = num_sampl / 4;
 	buf_.numFirstCount = (cur - v.begin()) + numFirstCount_;
-	pass_(&buf_,
-			sizeof(buf_) - (4 * NUM_SAMPL_PACK - num_sampl) * sizeof(short),
-			FILTER_NOISE);
+
+	while (pt < end) {
+		if (static_cast<unsigned int>(end - pt) < 4 * NUM_SAMPL_PACK)
+			trans = end - pt;
+		else
+			trans = 4 * NUM_SAMPL_PACK;
+		std::copy(pt, pt + trans, buf_.sampl);
+		pt += trans;
+		if (pt >= end)
+			count = LAST_PACKAGE;
+		buf_.num = count;
+		pass_(&buf_,
+				sizeof(buf_) - (4 * NUM_SAMPL_PACK - trans) * sizeof(short),
+				FILTER_NOISE);
+		count++;
+	}
 	return;
 
 }
@@ -156,8 +170,6 @@ void ExcessNoiseAlg::searchIncreaseNoise(std::vector<short>::iterator& cur,
 			}
 		}
 	}
-	std::cout << "cur " << (cur == end ? "equ" : "not equ") << " end\n";
-	return;
 }
 
 }
