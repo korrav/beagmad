@@ -396,8 +396,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 		char *compl_answer = new char[sizeof(answer) + sizeof(int)];
 		reinterpret_cast<h_pack_ans*>(compl_answer)->id = answer.id;
 		reinterpret_cast<h_pack_ans*>(compl_answer)->status = OK;
-		int* param = reinterpret_cast<int*>(compl_answer
-				+ sizeof(h_pack_ans));
+		int* param = reinterpret_cast<int*>(compl_answer + sizeof(h_pack_ans));
 		*param = algExN_->get_sigma();
 		pass_(compl_answer, sizeof(answer) + sizeof(int), ANSWER);
 	}
@@ -455,6 +454,8 @@ void Mad::post_overload(void) {
 			<< "Произошла перегрузка питания усилителей PGA. Выполняется принудительное обнуление коэффициентов усиления\n";
 	set_gain(buf);
 	clear_set_overload();
+	int buf_tr = OVERLOAD;
+	pass_(&buf_tr, sizeof(buf_tr), INFO);
 	return;
 }
 
