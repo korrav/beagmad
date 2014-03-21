@@ -17,6 +17,7 @@
 #include "WriteDataToFile.h"
 #include "gpio_overload.h"
 #include "sys/poll.h"
+#include <exception>
 
 using namespace std;
 using mad_n::Mad;
@@ -124,100 +125,104 @@ void hand_command_line(Mad& mad, istream& stream) {
 	if (!getline(stream, command))
 		return;
 	message.str(command);
-	while (message >> mes) {
-		if (mes == "start")
-			mad.start_adc();
-		else if (mes == "stop")
-			mad.stop_adc();
-		else if (mes == "reg")
-			mad.read_reg();
-		else if (mes == "spi0")
-			mad.start_spi0();
-		else if (mes == "spi1")
-			mad.start_spi1();
-		else if (mes == "exit")
-			exit(0);
-		else if (mes == "startt")
-			mad.start_test();
-		else if (mes == "stopt")
-			mad.stop_test();
-		else if (mes == "gain") {
-			int buf[4];
-			for (int i = 3; i >= 0; i--) {
+	try {
+		while (message >> mes) {
+			if (mes == "start")
+				mad.start_adc();
+			else if (mes == "stop")
+				mad.stop_adc();
+			else if (mes == "reg")
+				mad.read_reg();
+			else if (mes == "spi0")
+				mad.start_spi0();
+			else if (mes == "spi1")
+				mad.start_spi1();
+			else if (mes == "exit")
+				exit(0);
+			else if (mes == "startt")
+				mad.start_test();
+			else if (mes == "stopt")
+				mad.stop_test();
+			else if (mes == "gain") {
+				int buf[4];
+				for (int i = 3; i >= 0; i--) {
+					message >> mes;
+					buf[i] = stoi(mes);
+				}
+				mad.set_gain(buf);
+			} else if (mes == "open_a") {
 				message >> mes;
-				buf[i] = stoi(mes);
-			}
-			mad.set_gain(buf);
-		} else if (mes == "open_a") {
-			message >> mes;
-			mad.open_alg(mes);
-		} else if (mes == "close_a") {
-			message >> mes;
-			mad.close_alg(mes);
-		} else if (mes == "close_aa")
-			mad.close_all_alg();
-		else if (mes == "writin") {
-			int num = mad_n::WriteDataToFile::SIZE_P;
-			string nAlg, nFile;
-			message >> nAlg >> nFile;
-			message >> mes;
-			if (mes != "p")
-				num = stoi(mes);
-			mad.set_task_in(nAlg, nFile, num);
-		} else if (mes == "writout") {
-			int num = mad_n::WriteDataToFile::SIZE_P;
-			string nAlg, nFile;
-			message >> nAlg >> nFile;
-			message >> mes;
-			if (mes != "p")
-				num = stoi(mes);
-			mad.set_task_out(nAlg, nFile, num);
-		} else if (mes == "n_elem") {
-			message >> mes;
-			mad.get_count_queue(mes);
-		} else if (mes == "set_sigma") {
-			message >> mes;
-			int num = stoi(mes);
-			mad.algExN_->set_sigma(num);
-		} else if (mes == "set_par_b") {
-			message >> mes;
-			unsigned int bef = stoi(mes) * 4;
-			message >> mes;
-			unsigned int aft = stoi(mes) * 4;
-			if (!mad.algExN_->set_parameter_block(bef, aft))
-				std::cout
-						<< "Не удалось установить новые параметры пакета, передаваеого в режиме Гасик\n";
-		} else if (mes == "get_par_b") {
-			unsigned int bef, aft;
-			if (mad.algExN_->get_parameter_block(&bef, &aft))
-				cout << "Параметры блока данных алгоритма "
-						<< mad.algExN_->get_name()
-						<< " : количество отсчётов до события = " << bef / 4
-						<< " после события = " << aft / 4 << std::endl;
-		} else if (mes == "get_ac") {
-			list<std::string> listA;
-			std::string algorithms = "неактивен ни один алгортм";
-			mad.get_list_active_algoritm(&listA);
-			if (!listA.empty()) {
-				algorithms.clear();
-				for (std::string& name : listA)
-					algorithms += name + " ";
-			}
-			std::cout << "На данный момент " << algorithms << std::endl;
-		} else if (mes == "en_wb_noise")
-			mad.algExN_->enable_write_full_block();
-		else if (mes == "set_p_dm") {
-			message >> mes;
-			unsigned int second = static_cast<unsigned>(stoi(mes));
-			mad.set_period_monitor(second);
-		} else if (mes == "get_p_dm")
-			std::cout << "Период передачи мониторограмм на БЦ составляет "
-					<< mad.get_period_monitor() << " секунд\n";
-		else if (mes == "get_sigma")
-			std::cout << "Коэфициент превышения порога шума равен "
-					<< mad.algExN_->get_sigma() << std::endl;
-		else
-			cout << "Передана неизвестная команда\n";
+				mad.open_alg(mes);
+			} else if (mes == "close_a") {
+				message >> mes;
+				mad.close_alg(mes);
+			} else if (mes == "close_aa")
+				mad.close_all_alg();
+			else if (mes == "writin") {
+				int num = mad_n::WriteDataToFile::SIZE_P;
+				string nAlg, nFile;
+				message >> nAlg >> nFile;
+				message >> mes;
+				if (mes != "p")
+					num = stoi(mes);
+				mad.set_task_in(nAlg, nFile, num);
+			} else if (mes == "writout") {
+				int num = mad_n::WriteDataToFile::SIZE_P;
+				string nAlg, nFile;
+				message >> nAlg >> nFile;
+				message >> mes;
+				if (mes != "p")
+					num = stoi(mes);
+				mad.set_task_out(nAlg, nFile, num);
+			} else if (mes == "n_elem") {
+				message >> mes;
+				mad.get_count_queue(mes);
+			} else if (mes == "set_sigma") {
+				message >> mes;
+				int num = stoi(mes);
+				mad.algExN_->set_sigma(num);
+			} else if (mes == "set_par_b") {
+				message >> mes;
+				unsigned int bef = stoi(mes) * 4;
+				message >> mes;
+				unsigned int aft = stoi(mes) * 4;
+				if (!mad.algExN_->set_parameter_block(bef, aft))
+					std::cout
+							<< "Не удалось установить новые параметры пакета, передаваеого в режиме Гасик\n";
+			} else if (mes == "get_par_b") {
+				unsigned int bef, aft;
+				if (mad.algExN_->get_parameter_block(&bef, &aft))
+					cout << "Параметры блока данных алгоритма "
+							<< mad.algExN_->get_name()
+							<< " : количество отсчётов до события = " << bef / 4
+							<< " после события = " << aft / 4 << std::endl;
+			} else if (mes == "get_ac") {
+				list<std::string> listA;
+				std::string algorithms = "неактивен ни один алгортм";
+				mad.get_list_active_algoritm(&listA);
+				if (!listA.empty()) {
+					algorithms.clear();
+					for (std::string& name : listA)
+						algorithms += name + " ";
+				}
+				std::cout << "На данный момент " << algorithms << std::endl;
+			} else if (mes == "en_wb_noise")
+				mad.algExN_->enable_write_full_block();
+			else if (mes == "set_p_dm") {
+				message >> mes;
+				unsigned int second = static_cast<unsigned>(stoi(mes));
+				mad.set_period_monitor(second);
+			} else if (mes == "get_p_dm")
+				std::cout << "Период передачи мониторограмм на БЦ составляет "
+						<< mad.get_period_monitor() << " секунд\n";
+			else if (mes == "get_sigma")
+				std::cout << "Коэфициент превышения порога шума равен "
+						<< mad.algExN_->get_sigma() << std::endl;
+			else
+				cout << "Передана неизвестная команда\n";
+		}
+	} catch (...) {
+		std::cout << "Неверный формат команды\n";
 	}
 	message.clear();
 	return;
