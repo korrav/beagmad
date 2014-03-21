@@ -21,10 +21,10 @@
 using namespace std;
 using mad_n::Mad;
 
-void hand_command_line(Mad& mad); //обработка инструкций командной строки
+void hand_command_line(Mad& mad, istream& stream); //обработка инструкций командной строки
 
 int main(int argc, char* argv[]) {
-	if (argc != 2)
+	if (argc != 2 && argc != 3)
 		return 1;
 	int recBuf[SIZE_REC_BUF]; //приёмный буфер
 	cout << "Привет миру от Andrej!" << endl;
@@ -65,6 +65,19 @@ int main(int argc, char* argv[]) {
 	Mad mad(sock, mad_n::Sender::pass, &manager, &sink);
 	cout << "Создан объект класса Mad" << std::endl;
 
+	//обработка командного файла
+	if (argc >= 3) {
+		ifstream file(argv[2]);
+		if (!file.is_open()) {
+			cout << "Невозможно открыть командный файл " << argv[2]
+					<< std::endl;
+			return 1;
+		}
+		while (!file.eof())
+			hand_command_line(mad, file);
+		file.close();
+	}
+
 	int status = 0;
 	pollfd fds[3];
 	fds[0].fd = STDIN_FILENO;
@@ -87,7 +100,7 @@ int main(int argc, char* argv[]) {
 			}
 		}
 		if (fds[0].revents & POLLIN)
-			hand_command_line(mad);
+			hand_command_line(mad, cin);
 		if (fds[2].revents & POLLPRI) {
 			mad.post_overload();
 			char buf[2];
@@ -105,10 +118,11 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-void hand_command_line(Mad& mad) {
+void hand_command_line(Mad& mad, istream& stream) {
 	std::istringstream message;
 	string command, mes;
-	getline(cin, command);
+	if (!getline(stream, command))
+		return;
 	message.str(command);
 	while (message >> mes) {
 		if (mes == "start")
