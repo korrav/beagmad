@@ -95,7 +95,7 @@ void ManagerAlg::distributor(void) {
 			continue;
 		monitor_.calculation_stats(*pd);
 		for (auto palg = setA_.begin(); palg != setA_.end(); palg++) {
-			if (palg->second->check_valid_therad())
+			if (palg->second->check_valid_theard())
 				palg->second->push_fifo(pd);
 		}
 
@@ -228,13 +228,13 @@ void ManagerAlg::get_active_algorithm(std::list<std::string>* pls,
 		std::list<int>* pli) {
 	if (pls != nullptr)
 		for (auto& a : setA_) {
-			if (a.second->check_valid_therad()) {
+			if (a.second->check_valid_theard()) {
 				pls->push_back(a.first);
 			}
 		}
 	if (pli != nullptr)
 		for (auto& a : setA_) {
-			if (a.second->check_valid_therad()) {
+			if (a.second->check_valid_theard()) {
 				pli->push_back(a.second->get_id());
 			}
 		}

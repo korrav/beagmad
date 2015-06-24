@@ -39,6 +39,7 @@ class Mad {
 		GET_SIGMA, //получить текущее занчение коэффициента превышение шума
 		SET_PB, //установить параметры блока данных, передаваемого на БЦ
 		GET_PB, //получить параметры блока данных, передаваемого на БЦ
+		SET_PERIOD_MONITOR_PGA,	//установить новый период мониторинга pga
 	};
 
 	enum id_info {
@@ -64,6 +65,8 @@ class Mad {
 	void (*pass_)(void* pbuf, size_t size, int id_block); //функция передачи данных
 	ManagerAlg *manager_;	//менеджер алгоритмов
 	SinkAdcData *sinkAdc_;	//приёмник данных от АЦП
+	Head config;	//данные о конфигурации МАД
+	void fillConfig(std::string file);	//заполнение конфигурационных данных МАД
 	void clear_set_overload(void); //подтверждение приёма сообщения о перегрузке pga
 public:
 	void post_overload(void); //сообщение МАД о перегрузке pga
@@ -76,6 +79,7 @@ public:
 	bool start_test(void); //запуск тестового преобразования
 	bool stop_test(void); //остановка тестового преобразования
 	bool set_gain(int* gain); //установка коэффициентов усиления
+	bool set_period_monitoring_pga(unsigned char period);	//установка периода мониторинга деятельности pga; 0 - мониторинг отключен
 	bool start_spi0(void); //запуск единичной передачи spi0
 	bool start_spi1(void); //запуск единичной передачи spi1
 	void read_reg(void); //запрос дампа памяти модуля f3_spi
@@ -92,7 +96,7 @@ public:
 	void get_list_active_algoritm(std::list<std::string> *la); //получить список активных алгоритмов
 	void get_list_active_algoritm(std::list<int> *la); //получить список активных алгоритмов
 	Mad(const int& sock, void (*pf)(void*, size_t, int), ManagerAlg *m,
-			SinkAdcData *s);
+			SinkAdcData *s, std::string nameFileConfig);
 	Mad(const Mad&) = delete;
 	Mad& operator =(const Mad&) = delete;
 	virtual ~Mad();

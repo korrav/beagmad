@@ -22,13 +22,13 @@ class ManagerAlg;
  *класс, реализующий алгоритм по превышению уровня шумов
  */
 class ExcessNoiseAlg: public Algorithm {
-	class excep_out_of_algorithm { //класс, используемый для выходя из главной функции алгоритма
+	class excep_out_of_algorithm { //класс, используемый для выхода из главной функции алгоритма
 	};
 	unsigned int numFirstCount_; //номер первого отсчёта в приёмном буфере
 	datAfilterNoise buf_;
 	const unsigned int INIT_BEFORE_EVENT = 100; //начальное значение параметра количество отсчётов до события
 	const unsigned int INIT_AFTER_EVENT = 1800; //начальное значение параметра количество отсчётов до события
-	const short INIT_SIGMA = 6; //начальное значение параметра количество отсчётов до события
+	const short INIT_SIGMA = 6; //начальное значение коэффициента превышения шумов
 	unsigned int beforeEvent_; //количество отсчётов до события
 	unsigned int afterEvent_; //количество отсчётов после события (включая момент события)
 	short sigma_; //коэффициент превышения шумов (определяет необходимый уровень превышения шумов)

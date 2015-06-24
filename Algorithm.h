@@ -39,7 +39,7 @@ public:
 	virtual bool open_(void) = 0; //открытие потока (данная функция обязательно должна быть вызвана при открытии потока)
 	inline int get_id(void); //возвращает идентификатор алгоритма
 	void close_(void); //закрытие потока
-	inline bool check_valid_therad(void) const { //проверка активен ли поток алгоритма
+	inline bool check_valid_theard(void) const { //проверка активен ли поток алгоритма
 		return isRunThread_;
 	}
 	inline std::string get_name(void) const { //получить имя алгоритма

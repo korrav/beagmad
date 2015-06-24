@@ -11,6 +11,39 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+struct MarkPack {	//метка пакета
+	int id;	//уникальный номер блока данных
+	int part;	//порядковый номер куска блока данных
+	int totalPart;	//общее количество частей в пакете
+};
+
+struct SrcPack {
+	int idSrc;	//идентификатор источника
+	int idBlock;	//идентификатор блока
+};
+
+struct HeadPack {	//заголовок пакета
+	SrcPack endpoints;
+	MarkPack mark;
+};
+
+#define NUM_PARAM_HYD 3
+#define NUM_PARAM_AFC 3
+
+struct Head {
+	int32_t verSoft;	//версия формата пакета и файла метаданных
+	int32_t numMad;	//номер МАДа
+	int32_t verHard;	//версия аппаратуры
+	int32_t freq;	//частота дискретизации
+	int32_t gain[4];	//коэффициенты усиления в каналах
+	int32_t coordHyd[4][NUM_PARAM_HYD];	//координаты гидрофонов МАДа
+	int32_t afc[4][NUM_PARAM_AFC];	//АЧХ
+	int32_t numHyd[4];	//номера гидрофонов
+	int32_t numAlg;	//номер Алгоритма
+	int32_t verAlg;	//версия алгоритма
+};
+
+
 const unsigned int NUM_SAMPL_PACK = 2000; //количество отсчётов, который может поместиться в один пакет данных
 enum id { //идентификаторы блоков данных
 	COMMAND,	//блок, содержащий команду

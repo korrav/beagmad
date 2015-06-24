@@ -23,7 +23,7 @@ ExcessNoiseAlg::ExcessNoiseAlg(std::string name, const int& id,
 }
 
 bool ExcessNoiseAlg::open_(void) {
-	if (check_valid_therad()) {
+	if (check_valid_theard()) {
 		std::cout << "Алгоритм " << get_name() << " уже запущен\n";
 		return false;
 	}
@@ -41,7 +41,7 @@ void ExcessNoiseAlg::excessNoise(void) {
 	unsigned int beforeEvent, afterEvent;
 	try {
 		for (;;) {
-			if (!check_valid_therad())
+			if (!check_valid_theard())
 				break;
 			man_->get_rms(rms);
 			man_->get_mean(mean);
@@ -93,7 +93,7 @@ void ExcessNoiseAlg::increase_size_buf(std::vector<short>& buf,
 			buf.insert(buf.end(), pd_->get_buf(),
 					pd_->get_buf() + pd_->get_amount() * 4);
 		}
-		if (!check_valid_therad())
+		if (!check_valid_theard())
 			throw out;
 	}
 	if (pd_ != nullptr) {

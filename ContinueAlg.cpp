@@ -28,7 +28,7 @@ ContinueAlg::ContinueAlg(std::string name, const int& id,
 }
 
 bool ContinueAlg::open_(void) {
-	if (check_valid_therad()) {
+	if (check_valid_theard()) {
 		std::cout << "Алгоритм " << get_name() << " уже запущен\n";
 		return false;
 	}
@@ -41,7 +41,7 @@ void ContinueAlg::continious(void) {
 	DataADC d;
 	std::shared_ptr<const DataADC> pd;
 	for (;;) {
-		if (!check_valid_therad())
+		if (!check_valid_theard())
 			break;
 		pd = pop_fifo();
 		if (pd == nullptr)

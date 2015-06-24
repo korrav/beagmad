@@ -25,7 +25,8 @@ using mad_n::Mad;
 void hand_command_line(Mad& mad, istream& stream); //обработка инструкций командной строки
 
 int main(int argc, char* argv[]) {
-	if (argc != 2 && argc != 3)
+	std::string nameFileConfig = FILE_CONFIG_MAD;	//содержит имя конфигурационного файла Мада
+	if (!(argc > 2 && argc < 5))
 		return 1;
 	int recBuf[SIZE_REC_BUF]; //приёмный буфер
 	cout << "Привет миру от Andrej!" << endl;
@@ -49,10 +50,12 @@ int main(int argc, char* argv[]) {
 	int sizeSend = 2 * MAX_SIZE_SAMPL_SEND * 4 * sizeof(short);
 	if (setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sizeSend, sizeof(int)) == -1) {
 		std::cerr
-				<< "Не поддерживается объём буфера передачи сокета  в размере "
-				<< sizeSend << " байт\n";
+		<< "Не поддерживается объём буфера передачи сокета  в размере "
+		<< sizeSend << " байт\n";
 		return 1;
 	}
+	if(argc > 3)
+		nameFileConfig = argv[4];
 	//открытие файла цифрового ввода, сигнализирующего о перегрузке pga
 	int fd_over = open_file_gpio_overload();
 	if (fd_over < 0)
@@ -71,7 +74,7 @@ int main(int argc, char* argv[]) {
 		ifstream file(argv[2]);
 		if (!file.is_open()) {
 			cout << "Невозможно открыть командный файл " << argv[2]
-					<< std::endl;
+																 << std::endl;
 			return 1;
 		}
 		while (!file.eof())
@@ -150,6 +153,10 @@ void hand_command_line(Mad& mad, istream& stream) {
 					buf[i] = stoi(mes);
 				}
 				mad.set_gain(buf);
+			} else if (mes == "set_p_mp") {
+				message >> mes;
+				unsigned char period = static_cast<unsigned char>(stoi(mes));
+				mad.set_period_monitoring_pga(period);
 			} else if (mes == "open_a") {
 				message >> mes;
 				mad.open_alg(mes);
@@ -188,14 +195,14 @@ void hand_command_line(Mad& mad, istream& stream) {
 				unsigned int aft = stoi(mes) * 4;
 				if (!mad.algExN_->set_parameter_block(bef, aft))
 					std::cout
-							<< "Не удалось установить новые параметры пакета, передаваеого в режиме Гасик\n";
+					<< "Не удалось установить новые параметры пакета, передаваеого в режиме Гасик\n";
 			} else if (mes == "get_par_b") {
 				unsigned int bef, aft;
 				if (mad.algExN_->get_parameter_block(&bef, &aft))
 					cout << "Параметры блока данных алгоритма "
-							<< mad.algExN_->get_name()
-							<< " : количество отсчётов до события = " << bef / 4
-							<< " после события = " << aft / 4 << std::endl;
+					<< mad.algExN_->get_name()
+					<< " : количество отсчётов до события = " << bef / 4
+					<< " после события = " << aft / 4 << std::endl;
 			} else if (mes == "get_ac") {
 				list<std::string> listA;
 				std::string algorithms = "неактивен ни один алгортм";
@@ -214,10 +221,10 @@ void hand_command_line(Mad& mad, istream& stream) {
 				mad.set_period_monitor(second);
 			} else if (mes == "get_p_dm")
 				std::cout << "Период передачи мониторограмм на БЦ составляет "
-						<< mad.get_period_monitor() << " секунд\n";
+				<< mad.get_period_monitor() << " секунд\n";
 			else if (mes == "get_sigma")
 				std::cout << "Коэфициент превышения порога шума равен "
-						<< mad.algExN_->get_sigma() << std::endl;
+				<< mad.algExN_->get_sigma() << std::endl;
 			else
 				cout << "Передана неизвестная команда\n";
 		}
