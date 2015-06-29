@@ -14,6 +14,7 @@
 #include "main.h"
 #include <string>
 #include <list>
+#include <boost/optional.hpp>
 namespace mad_n {
 /*
  *
@@ -65,10 +66,11 @@ class Mad {
 	void (*pass_)(void* pbuf, size_t size, int id_block); //функция передачи данных
 	ManagerAlg *manager_;	//менеджер алгоритмов
 	SinkAdcData *sinkAdc_;	//приёмник данных от АЦП
-	Head config;	//данные о конфигурации МАД
+	Head config_;	//данные о конфигурации МАД
 	void fillConfig(std::string file);	//заполнение конфигурационных данных МАД
 	void clear_set_overload(void); //подтверждение приёма сообщения о перегрузке pga
 public:
+	static boost::optional<int> getMadIdFromConfigFile(const std::string& file);	//получить идентификатор МАД из конфигурационного файла
 	void post_overload(void); //сообщение МАД о перегрузке pga
 	void set_period_monitor(const unsigned& s); //установить период передачи мониторограмм
 	unsigned int get_period_monitor(void); //получить период передачи мониторограмм

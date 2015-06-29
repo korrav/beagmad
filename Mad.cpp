@@ -16,6 +16,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <iostream>
+#include <fstream>
+#include <stdexcept>
+#include <bitset>
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
 
 enum i2c_id {
 	START_ADC,
@@ -217,14 +222,14 @@ void Mad::close_alg(const std::string& name) {
 bool Mad::open_alg(const int& id) {
 	bool status = manager_->turnOn(id);
 	std::cout << (status ? "запущен алгоритм " : "не существует алгоритма ")
-							<< "с идентификаторм " << id << std::endl;
+																																													<< "с идентификаторм " << id << std::endl;
 	return status;
 }
 
 bool Mad::close_alg(const int& id) {
 	bool status = manager_->turnOff(id);
 	std::cout << (status ? "Остановлен алгоритм " : "Не существует алгоритма ")
-							<< "с идентификаторм " << id << std::endl;
+																																													<< "с идентификаторм " << id << std::endl;
 	return status;
 }
 
@@ -471,8 +476,8 @@ void Mad::post_overload(void) {
 
 Mad::Mad(const int& sock, void (*pf)(void*, size_t, int), ManagerAlg *m,
 		SinkAdcData *s, std::string nameFileConfig) :
-						sock_(sock), isRunThreadAdc_(false), isRunThreadTest_(false), pass_(pf), manager_(
-								m), sinkAdc_(s) {
+																																												sock_(sock), isRunThreadAdc_(false), isRunThreadTest_(false), pass_(pf), manager_(
+																																														m), sinkAdc_(s) {
 	//открытие файлов связи с акустической платой
 	int addr = 3;
 	if ((f3_i2c_ = open(devI2C_, O_RDWR)) < 0) {
@@ -516,7 +521,101 @@ bool Mad::set_period_monitoring_pga(unsigned char period) {
 }
 
 void Mad::fillConfig(std::string file) {
+	if(!boost::filesystem::exists(file)) {
+		std::cerr << "Конфигурационного файла" << file << " не существует\n";
+		exit(1);
+	}
+	std::ifstream configFile(file);
+	if(!configFile) {
+		std::cerr << "Невозможно открыть конфигурационный файл\n";
+		exit(1);
+	}
+	std::string message;
+	std::vector<std::string> vecMes;
+	std::bitset<8> stateUsedArg;
+	using namespace boost::algorithm;
+	while(std::getline(configFile, message)) {
+		vecMes.clear();
+		trim(message);
+		split(vecMes, message, is_space(), token_compress_on);
+		try {
+			if(to_upper_copy(vecMes[0]) == "FORMAT_VER" && vecMes.size() >= 2) {
+				config_.verSoft = std::stoi(vecMes[1]);
+				stateUsedArg.set(0);
+			} else if(to_upper_copy(vecMes[0]) == "MAD" && vecMes.size() >= 2) {
+				config_.numMad = std::stoi(vecMes[1]);
+				stateUsedArg.set(1);
+			} else if(to_upper_copy(vecMes[0]) == "HARD_VER" && vecMes.size() >= 2) {
+				config_.verHard = std::stoi(vecMes[1]);
+				stateUsedArg.set(2);
+			} else if(to_upper_copy(vecMes[0]) == "FREQ" && vecMes.size() >= 2) {
+				config_.freq = std::stoi(vecMes[1]);
+				stateUsedArg.set(3);
+			} else if(to_upper_copy(vecMes[0]) == "GAIN" && vecMes.size() >= 5){
+				for(int i = 0; i < 4; i++)
+					config_.gain[i] = std::stoi(vecMes[1 + i]);
+				stateUsedArg.set(4);
+			} else if(to_upper_copy(vecMes[0]) == "COORD_HYD" && vecMes.size() >= 13) {
+				for(int hyd = 0; hyd < 4; hyd++)
+					for(int i = 0; i < 3; i++)
+						config_.coordHyd[hyd][i] = std::stoi(vecMes[1 + 3 * hyd + i]);
+				stateUsedArg.set(5);
+			} else if(to_upper_copy(vecMes[0]) == "AFC" && vecMes.size() >= 13) {
+				for(int hyd = 0; hyd < 4; hyd++)
+					for(int i = 0; i < 3; i++)
+						config_.afc[hyd][i] = std::stoi(vecMes[1 + 3 * hyd + i]);
+				stateUsedArg.set(6);
+			} else if(to_upper_copy(vecMes[0]) == "NUMB_HYD" && vecMes.size() >= 5){
+				for(int i = 0; i < 4; i++)
+					config_.numHyd[i] = std::stoi(vecMes[1 + i]);
+				stateUsedArg.set(7);
+			}
+		} catch (const std::invalid_argument& ia) {
+			std::cerr << "Неправильно отформатирован конфигурационный файл. Аргумент содержит нечисловое значение\n";
+			exit(1);
+		}
+		catch (const std::out_of_range& oor) {
+			std::cerr << "Неправильно отформатирован конфигурационный файл. Аргумент содержит слишком большое значение\n";
+			exit(1);
+		}
+	}
+	if(!stateUsedArg.all()) {
+		std::cerr << "Неправильно отформатирован конфигурационный файл. Учтены не все параметры конфигурации\n";
+		exit(1);
+	}
+}
 
+boost::optional<int> Mad::getMadIdFromConfigFile(const std::string& file) {
+	if(!boost::filesystem::exists(file)) {
+		std::cerr << "Конфигурационного файла" << file << " не существует\n";
+		exit(1);
+	}
+	std::ifstream configFile(file);
+	if(!configFile) {
+		std::cerr << "Невозможно открыть конфигурационный файл\n";
+		exit(1);
+	}
+	std::string message;
+	std::vector<std::string> vecMes;
+	using namespace boost::algorithm;
+	while(std::getline(configFile, message)) {
+		vecMes.clear();
+		trim(message);
+		split(vecMes, message, is_space(), token_compress_on);
+		try {
+			if(to_upper_copy(vecMes[0]) == "MAD" && vecMes.size() >= 2)
+				return std::stoi(vecMes[1]);
+		}
+		catch (const std::invalid_argument& ia) {
+			std::cerr << "Неправильно отформатирован конфигурационный файл. Аргумент содержит нечисловое значение\n";
+			exit(1);
+		}
+		catch (const std::out_of_range& oor) {
+			std::cerr << "Неправильно отформатирован конфигурационный файл. Аргумент содержит слишком большое значение\n";
+			exit(1);
+		}
+	}
+	return boost::optional<int>{};
 }
 
 Mad::~Mad() {
@@ -568,4 +667,5 @@ void Mad::set_period_monitor(const unsigned& s) {
 unsigned int Mad::get_period_monitor(void) {
 	return manager_->monitor_.get_period();
 }
+
 } /* namespace mad_n */

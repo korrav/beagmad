@@ -26,10 +26,9 @@ void hand_command_line(Mad& mad, istream& stream); //обработка инст
 
 int main(int argc, char* argv[]) {
 	std::string nameFileConfig = FILE_CONFIG_MAD;	//содержит имя конфигурационного файла Мада
-	if (!(argc > 2 && argc < 5))
+	if (!(argc > 0 && argc < 4))
 		return 1;
 	int recBuf[SIZE_REC_BUF]; //приёмный буфер
-	cout << "Привет миру от Andrej!" << endl;
 	int sock;	//сокет МАД
 	//инициализация адреса МАД
 	sockaddr_in addrMad;
@@ -54,23 +53,30 @@ int main(int argc, char* argv[]) {
 		<< sizeSend << " байт\n";
 		return 1;
 	}
-	if(argc > 3)
-		nameFileConfig = argv[4];
+	if(argc > 1)
+		nameFileConfig = argv[1];
 	//открытие файла цифрового ввода, сигнализирующего о перегрузке pga
 	int fd_over = open_file_gpio_overload();
 	if (fd_over < 0)
 		return 1;
-	mad_n::Sender sender(sock, BAG_ADDR, BAG_PORT, atoi(argv[1]));
+	auto idMad = mad_n::Mad::getMadIdFromConfigFile(argv[1]);
+	if(idMad)
+		std::cout << "Идентификатор МАД = " << idMad.get() << std::endl;
+	else {
+		std::cout << "В конфигурационном файле нет параметра идентификатор МАД\n";
+		exit(1);
+	}
+	mad_n::Sender sender(sock, BAG_ADDR, BAG_PORT, *idMad);
 	cout << "Создан объект класса Sender" << std::endl;
 	mad_n::SinkAdcData sink(DEV_SPI);
 	cout << "Создан объект класса SinkAdcData" << std::endl;
 	mad_n::ManagerAlg manager(&sink, mad_n::Sender::pass);
 	cout << "Создан объект класса ManagerAlg" << std::endl;
-	Mad mad(sock, mad_n::Sender::pass, &manager, &sink);
+	Mad mad(sock, mad_n::Sender::pass, &manager, &sink, nameFileConfig);
 	cout << "Создан объект класса Mad" << std::endl;
 
 	//обработка командного файла
-	if (argc >= 3) {
+	if (argc > 2) {
 		ifstream file(argv[2]);
 		if (!file.is_open()) {
 			cout << "Невозможно открыть командный файл " << argv[2]
