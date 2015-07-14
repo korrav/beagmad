@@ -29,7 +29,7 @@ Sender::Sender(const int& sock, const char* ip, const unsigned short& port,
 	inet_pton(AF_INET, ip, &addrBag_.sin_addr);
 }
 
-void Sender::pass(void* pbuf, size_t size, int id_block) {
+void Sender::pass(std::vector<int8_t>& pbuf, int id_block) {
 	std::lock_guard<std::mutex> lock(mut_);
 
 	//получение идентификатора передаваемого пакета
@@ -38,7 +38,8 @@ void Sender::pass(void* pbuf, size_t size, int id_block) {
 	static HeadPack* pHead = reinterpret_cast<HeadPack*>(&buf[0]);
 	static auto pData = buf.begin() + sizeof(HeadPack);
 
-	int8_t* pTransBuf = reinterpret_cast<int8_t*>(pbuf);
+	size_t size = pbuf.size();
+	int8_t* pTransBuf = pbuf.data();
 	//из скольких частей состоит пакет
 	int numPart = ceil(static_cast<double>(size)/ MAX_SIZE_PAYLOAD_PACK);
 	//заполнение шапки пакета

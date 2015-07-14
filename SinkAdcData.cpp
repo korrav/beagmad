@@ -127,7 +127,7 @@ void SinkAdcData::set_gain(short * g) {
 	return;
 }
 
-void SinkAdcData::get_gain(short * g) {
+void SinkAdcData::get_gain(int32_t * g) {
 	for (short& x : gain_)
 		*(g++) = x;
 	return;

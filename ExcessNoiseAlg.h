@@ -25,13 +25,13 @@ class ExcessNoiseAlg: public Algorithm {
 	class excep_out_of_algorithm { //класс, используемый для выхода из главной функции алгоритма
 	};
 	unsigned int numFirstCount_; //номер первого отсчёта в приёмном буфере
-	datAfilterNoise buf_;
+	Gasik buf_;
 	const unsigned int INIT_BEFORE_EVENT = 100; //начальное значение параметра количество отсчётов до события
 	const unsigned int INIT_AFTER_EVENT = 1800; //начальное значение параметра количество отсчётов до события
-	const short INIT_SIGMA = 6; //начальное значение коэффициента превышения шумов
+	const unsigned int INIT_SIGMA = 6; //начальное значение коэффициента превышения шумов
 	unsigned int beforeEvent_; //количество отсчётов до события
 	unsigned int afterEvent_; //количество отсчётов после события (включая момент события)
-	short sigma_; //коэффициент превышения шумов (определяет необходимый уровень превышения шумов)
+	unsigned int sigma_; //коэффициент превышения шумов (определяет необходимый уровень превышения шумов)
 	ManagerAlg* man_; //указатель на объект накопления статистики
 	mutable std::mutex mutBefAf_; //мьютекс, защищающий модификацию параметров передаваемого блока данных
 	static std::shared_ptr<const DataADC> pd_; //указывает на обрабатываемый в данный момент блок
@@ -52,8 +52,7 @@ public:
 	int get_sigma(void) const; //получить коэффициент превышения шума
 	bool open_(void);
 	void excessNoise(void);
-	ExcessNoiseAlg(std::string name, const int& id,
-			void (*pf)(void*, size_t, int), ManagerAlg* man);
+	ExcessNoiseAlg(std::string name, const int& id,void (*pf)(std::vector<int8_t>&, int), ManagerAlg* man);
 	virtual ~ExcessNoiseAlg();
 };
 

@@ -44,7 +44,7 @@ public:
 	std::shared_ptr<DataADC> obtainData(void);
 	int get_count_queue(void); //возвратить количество элементов в очереди
 	void set_gain(short* g); //установка коэффициентов усиления каналов
-	void get_gain(short* g); //получение коэффициентов усиления каналов
+	void get_gain(int32_t* g); //получение коэффициентов усиления каналов
 	void set_freq(const int& f); //установка частоты дискретизации
 	int get_freq(void); //получение частоты дискретизации
 	void set_task_in(const std::string& nameFile, const int& num);

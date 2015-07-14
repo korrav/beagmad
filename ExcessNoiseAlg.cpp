@@ -8,18 +8,19 @@
 #include "ExcessNoiseAlg.h"
 #include <iostream>
 #include "ManagerAlg.h"
-#include<string.h>
+#include <string.h>
 #include <algorithm>
 #include <fstream>
+#include <cstddef>
 namespace mad_n {
 
 std::shared_ptr<const DataADC> ExcessNoiseAlg::pd_ = nullptr;
 
 ExcessNoiseAlg::ExcessNoiseAlg(std::string name, const int& id,
-		void (*pf)(void*, size_t, int), ManagerAlg* man) :
-		Algorithm(name, id, pf), numFirstCount_(0), beforeEvent_(
-				INIT_BEFORE_EVENT), afterEvent_(INIT_AFTER_EVENT), sigma_(
-				INIT_SIGMA), man_(man), isEnableWriteFullBlock_(false) {
+		void (*pf)(std::vector<int8_t>&, int), ManagerAlg* man) :
+								Algorithm(name, id, pf), numFirstCount_(0), beforeEvent_(
+										INIT_BEFORE_EVENT), afterEvent_(INIT_AFTER_EVENT), sigma_(
+												INIT_SIGMA), man_(man), isEnableWriteFullBlock_(false) {
 }
 
 bool ExcessNoiseAlg::open_(void) {
@@ -43,32 +44,36 @@ void ExcessNoiseAlg::excessNoise(void) {
 		for (;;) {
 			if (!check_valid_theard())
 				break;
+			//получаю текущее состояние статистики
 			man_->get_rms(rms);
 			man_->get_mean(mean);
+			//получаю размер пакета, содержащего событие а также положение событя в нём
 			get_parameter_block(&beforeEvent, &afterEvent);
 			increase_size_buf(samples, (beforeEvent + afterEvent) * 4);
-			pcur = samples.begin() + 4 * beforeEvent;
+			pcur = samples.begin() + 4 * beforeEvent;	//указатель на положение события
 
 			//проверка на наличие отсчётов, превышающих уровень мощности
 			searchIncreaseNoise(pcur, samples.end(), rms, mean);
-			if (pcur < samples.end()) {
-				int idx_cur = pcur - samples.begin();
-				if (pcur + 4 * afterEvent < samples.end())
+			if (pcur < samples.end()) {	//событие найдено
+				int idx_cur = pcur - samples.begin();	//индекс положения cj,znbz
+				if (pcur + 4 * afterEvent < samples.end())	//если событие полностью помещается в текущий буфер
 					transfer_data(samples,
 							samples.begin() + idx_cur - beforeEvent * 4,
 							4 * (beforeEvent + afterEvent));
-				else {
+				else {										//если событие не полностью помещается в текущий буфер
 					increase_size_buf(samples,
 							samples.size() + 4 * afterEvent
-									- (samples.end() - pcur));
+							- (samples.end() - pcur));
 					transfer_data(samples,
 							samples.begin() + idx_cur - 4 * beforeEvent,
 							4 * (beforeEvent + afterEvent));
 				}
-				auto end = samples.begin() + idx_cur + 4 * afterEvent;
+				auto end = samples.begin() + idx_cur + 4 * afterEvent;	//конечная позиция события
+				//обрезка начала буфера и соответственное обновление номера первого отсчёта буфера
 				samples.erase(samples.begin(), end);
 				numFirstCount_ += (end - samples.begin()) / 4;
-			} else {
+			} else {		//событие не найдено
+				//обрезка начала буфера и соответственное обновление номера первого отсчёта буфера
 				auto end = samples.end() - 4 * beforeEvent;
 				samples.erase(samples.begin(), end);
 				numFirstCount_ += (end - samples.begin()) / 4;
@@ -96,12 +101,8 @@ void ExcessNoiseAlg::increase_size_buf(std::vector<short>& buf,
 		if (!check_valid_theard())
 			throw out;
 	}
-	if (pd_ != nullptr) {
-		numFirstCount_ = pd_->get_first()
-				- (buf.size() / 4 - pd_->get_amount());
-		buf_.freq = pd_->get_freq();
-		pd_->get_gain(buf_.gain);
-	}
+	if (pd_ != nullptr)
+		numFirstCount_ = pd_->get_first() - (buf.size() / 4 - pd_->get_amount());
 	return;
 
 }
@@ -109,26 +110,13 @@ void ExcessNoiseAlg::increase_size_buf(std::vector<short>& buf,
 void ExcessNoiseAlg::transfer_data(std::vector<short>& v,
 		const std::vector<short>::iterator& cur, const unsigned &num_sampl) {
 	std::vector<short>::iterator pt = cur, end = cur + num_sampl;
-	int trans = 0;
-	int count = 0;
-	buf_.amountCount = num_sampl / 4;
-	buf_.numFirstCount = (cur - v.begin()) + numFirstCount_;
+	buf_.buf.numFirstCount = (cur - v.begin()) + numFirstCount_;
+	buf_.param.level = sigma_;
 
-	while (pt < end) {
-		if (static_cast<unsigned int>(end - pt) < 4 * NUM_SAMPL_PACK)
-			trans = end - pt;
-		else
-			trans = 4 * NUM_SAMPL_PACK;
-		std::copy(pt, pt + trans, buf_.sampl);
-		pt += trans;
-		if (pt >= end)
-			count = LAST_PACKAGE;
-		buf_.num = count;
-		pass_(&buf_,
-				sizeof(buf_) - (4 * NUM_SAMPL_PACK - trans) * sizeof(short),
-				FILTER_NOISE);
-		count++;
-	}
+	std::copy_n(cur, num_sampl, reinterpret_cast<short*>(&buf_.buf.data));
+	size_t sizeBuf = num_sampl * sizeof(short) + offsetof(Gasik, buf) + offsetof(DataAlgorithm, data);
+	if(pd_ != nullptr)
+		pass_(&buf_, sizeBuf, GASIK, pd_);
 	return;
 
 }

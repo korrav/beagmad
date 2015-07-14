@@ -19,6 +19,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <bitset>
+#include <functional>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
@@ -47,7 +48,9 @@ enum i2c_id {
 //получение информации о регистрах модулей SPI0 и SPI1 в пространстве ядра
 #define IOCTL_READ_REGISTERS _IO(ID_IO_F3_SPI, 5)
 
+
 namespace mad_n {
+Head Mad::config_;
 bool Mad::sync(void) {
 	bool status = true;
 	if (ioctl(f3_spi_, IOCTL_ADC_SYNC) < 0) {
@@ -222,14 +225,14 @@ void Mad::close_alg(const std::string& name) {
 bool Mad::open_alg(const int& id) {
 	bool status = manager_->turnOn(id);
 	std::cout << (status ? "запущен алгоритм " : "не существует алгоритма ")
-																																													<< "с идентификаторм " << id << std::endl;
+																																																											<< "с идентификаторм " << id << std::endl;
 	return status;
 }
 
 bool Mad::close_alg(const int& id) {
 	bool status = manager_->turnOff(id);
 	std::cout << (status ? "Остановлен алгоритм " : "Не существует алгоритма ")
-																																													<< "с идентификаторм " << id << std::endl;
+																																																											<< "с идентификаторм " << id << std::endl;
 	return status;
 }
 
@@ -239,17 +242,19 @@ void Mad::close_all_alg(void) {
 	return;
 }
 
-void Mad::receive(const unsigned int& len, void* pbuf) {
-	if (len < sizeof(h_pack_com))
+void Mad::receive(PtrData pPack) {
+	PtrData pBuf;
+	int idBlock = -1;
+	std::make_pair(std::ref(pBuf), std::ref(idBlock)) = col_.receivBlock(pPack);
+	if (pBuf == nullptr || pBuf->size() < sizeof(int))
 		return;
-	unsigned len_com = len - sizeof(h_package);
-	h_pack_com* command = reinterpret_cast<h_pack_com*>(pbuf);
-	int* arg = nullptr;
-	if (len_com > 0)
-		arg = reinterpret_cast<int*>(reinterpret_cast<char*>(pbuf)
-				+ sizeof(h_pack_com));
-	h_pack_ans answer = { command->id };
-	switch (command->id) {
+	if(idBlock != COMMAND)
+		return;
+	unsigned len_com = pBuf->size();
+	int* pCommand = reinterpret_cast<int*>(pBuf->data());
+	int* arg = pCommand + 1;
+	h_pack_ans answer = {*pCommand};
+	switch (*pCommand) {
 	case ID_START_ADC:
 		if (len_com != sizeof(int))
 			break;
@@ -257,7 +262,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 			answer.status = OK;
 		else
 			answer.status = NOT_OK;
-		pass_(&answer, sizeof(answer), ANSWER);
+		passAnswer(&answer, sizeof(answer));
 		break;
 	case ID_STOP_ADC:
 		if (len_com != sizeof(int))
@@ -266,7 +271,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 			answer.status = OK;
 		else
 			answer.status = NOT_OK;
-		pass_(&answer, sizeof(answer), ANSWER);
+		passAnswer(&answer, sizeof(answer));
 		break;
 	case ID_START_TEST:
 		if (len_com != sizeof(int))
@@ -275,7 +280,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 			answer.status = OK;
 		else
 			answer.status = NOT_OK;
-		pass_(&answer, sizeof(answer), ANSWER);
+		passAnswer(&answer, sizeof(answer));
 		break;
 	case ID_STOP_TEST:
 		if (len_com != sizeof(int))
@@ -284,7 +289,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 			answer.status = OK;
 		else
 			answer.status = NOT_OK;
-		pass_(&answer, sizeof(answer), ANSWER);
+		passAnswer(&answer, sizeof(answer));
 		break;
 	case ID_SET_GAIN:
 		if (len_com != 5 * sizeof(int))
@@ -293,7 +298,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 			answer.status = OK;
 		else
 			answer.status = NOT_OK;
-		pass_(&answer, sizeof(answer), ANSWER);
+		passAnswer(&answer, sizeof(answer));
 		break;
 	case OPEN_ALG:
 		if (len_com != 2 * sizeof(int))
@@ -302,7 +307,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 			answer.status = OK;
 		else
 			answer.status = NOT_OK;
-		pass_(&answer, sizeof(answer), ANSWER);
+		passAnswer(&answer, sizeof(answer));
 		break;
 	case CLOSE_ALG:
 		if (len_com != 2 * sizeof(int))
@@ -311,21 +316,21 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 			answer.status = OK;
 		else
 			answer.status = NOT_OK;
-		pass_(&answer, sizeof(answer), ANSWER);
+		passAnswer(&answer, sizeof(answer));
 		break;
 	case CLOSE_ALL_ALG:
 		if (len_com != sizeof(int))
 			break;
 		close_all_alg();
 		answer.status = OK;
-		pass_(&answer, sizeof(answer), ANSWER);
+		passAnswer(&answer, sizeof(answer));
 		break;
 	case SET_SIGMA:
 		if (len_com != 2 * sizeof(int))
 			break;
 		algExN_->set_sigma(*arg);
 		answer.status = OK;
-		pass_(&answer, sizeof(answer), ANSWER);
+		passAnswer(&answer, sizeof(answer));
 		break;
 	case SET_PERIOD_MONITOR_PGA:
 		if (len_com != 2 * sizeof(int))
@@ -334,7 +339,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 			answer.status = OK;
 		else
 			answer.status = NOT_OK;
-		pass_(&answer, sizeof(answer), ANSWER);
+		passAnswer(&answer, sizeof(answer));
 		break;
 	case SET_PB:
 		if (len_com != 3 * sizeof(int))
@@ -343,7 +348,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 			answer.status = OK;
 		else
 			answer.status = NOT_OK;
-		pass_(&answer, sizeof(answer), ANSWER);
+		passAnswer(&answer, sizeof(answer));
 		break;
 
 	case GET_PB: {
@@ -357,7 +362,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 			reinterpret_cast<h_pack_ans*>(compl_answer)->status = OK;
 		else
 			reinterpret_cast<h_pack_ans*>(compl_answer)->status = NOT_OK;
-		pass_(compl_answer, sizeof(answer) + 2 * sizeof(int), ANSWER);
+		passAnswer(compl_answer, sizeof(answer) + 2 * sizeof(int));
 		delete[] compl_answer;
 	}
 	break;
@@ -374,7 +379,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 		for (unsigned int i = 0; i < l.size(); i++, pl++)
 			param[i] = *pl;
 
-		pass_(compl_answer, sizeof(answer) + l.size() * sizeof(int), ANSWER);
+		passAnswer(compl_answer, sizeof(answer) + l.size() * sizeof(int));
 	}
 	break;
 	case SYNC:
@@ -384,14 +389,14 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 			answer.status = OK;
 		else
 			answer.status = NOT_OK;
-		pass_(&answer, sizeof(answer), ANSWER);
+		passAnswer(&answer, sizeof(answer));
 		break;
 	case SET_PERIOD_MONITOR:
 		if (len_com != 2 * sizeof(int))
 			break;
 		set_period_monitor(arg[0]);
 		answer.status = OK;
-		pass_(&answer, sizeof(answer), ANSWER);
+		passAnswer(&answer, sizeof(answer));
 		break;
 	case GET_PERIOD_MONITOR: {
 		if (len_com != sizeof(int))
@@ -402,7 +407,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 		unsigned int* param = reinterpret_cast<unsigned int*>(compl_answer
 				+ sizeof(h_pack_ans));
 		*param = get_period_monitor();
-		pass_(compl_answer, sizeof(answer) + sizeof(unsigned int), ANSWER);
+		passAnswer(compl_answer, sizeof(answer) + sizeof(unsigned int));
 	}
 	break;
 	case GET_SIGMA: {
@@ -413,7 +418,7 @@ void Mad::receive(const unsigned int& len, void* pbuf) {
 		reinterpret_cast<h_pack_ans*>(compl_answer)->status = OK;
 		int* param = reinterpret_cast<int*>(compl_answer + sizeof(h_pack_ans));
 		*param = algExN_->get_sigma();
-		pass_(compl_answer, sizeof(answer) + sizeof(int), ANSWER);
+		passAnswer(compl_answer, sizeof(answer) + sizeof(int));
 	}
 	break;
 	}
@@ -470,14 +475,12 @@ void Mad::post_overload(void) {
 	set_gain(buf);
 	clear_set_overload();
 	int buf_tr = OVERLOAD;
-	pass_(&buf_tr, sizeof(buf_tr), INFO);
+	passInfo(&buf_tr, sizeof(buf_tr));
 	return;
 }
 
-Mad::Mad(const int& sock, void (*pf)(void*, size_t, int), ManagerAlg *m,
-		SinkAdcData *s, std::string nameFileConfig) :
-																																												sock_(sock), isRunThreadAdc_(false), isRunThreadTest_(false), pass_(pf), manager_(
-																																														m), sinkAdc_(s) {
+Mad::Mad(void (*pf)(std::vector<int8_t>& pbuf, int id_block), ManagerAlg *m, SinkAdcData *s, std::string nameFileConfig) :
+		isRunThreadAdc_(false), isRunThreadTest_(false), pass__(pf), manager_(m), sinkAdc_(s) {
 	//открытие файлов связи с акустической платой
 	int addr = 3;
 	if ((f3_i2c_ = open(devI2C_, O_RDWR)) < 0) {
@@ -498,9 +501,9 @@ Mad::Mad(const int& sock, void (*pf)(void*, size_t, int), ManagerAlg *m,
 	short gain[4] = { GAIN_, GAIN_, GAIN_, GAIN_ };
 	sinkAdc_->set_gain(gain);
 	//добавление алгоритмов в менеджер
-	algCont_ = new ContinueAlg(name_alg_[CONTINIOUS], CONTINIOUS, pass_);
+	algCont_ = new ContinueAlg(name_alg_[CONTINIOUS], CONTINIOUS, pf);
 	manager_->addAlgorithm(algCont_);
-	algExN_ = new ExcessNoiseAlg(name_alg_[GASIK], GASIK, pass_, manager_);
+	algExN_ = new ExcessNoiseAlg(name_alg_[GASIK], GASIK, pf, manager_);
 	manager_->addAlgorithm(algExN_);
 	return;
 }
@@ -616,6 +619,34 @@ boost::optional<int> Mad::getMadIdFromConfigFile(const std::string& file) {
 		}
 	}
 	return boost::optional<int>{};
+}
+
+Head Mad::getConfig(void) {
+	return config_;
+}
+
+void Mad::passAnswer(void* pbuf, size_t size) {
+	Head config = getConfig();
+	sinkAdc_->get_gain(config.gain);
+	config.freq = sinkAdc_->get_freq();
+	size_t sizeFull = sizeof(Head) + size;
+	std::vector<int8_t> pBufFull(sizeFull);
+	auto iterator = std::copy_n(reinterpret_cast<int8_t*>(&config), sizeof(config), pBufFull.begin());
+	std::copy_n(reinterpret_cast<int8_t*>(pbuf), sizeof(size), iterator);
+	pass__(pBufFull, ANSWER);
+	return;
+}
+
+void Mad::passInfo(void* pbuf, size_t size) {
+	Head config = getConfig();
+	sinkAdc_->get_gain(config.gain);
+	config.freq = sinkAdc_->get_freq();
+	size_t sizeFull = sizeof(Head) + size;
+	std::vector<int8_t> pBufFull(sizeFull);
+	auto iterator = std::copy_n(reinterpret_cast<int8_t*>(&config), sizeof(config), pBufFull.begin());
+	std::copy_n(reinterpret_cast<int8_t*>(pbuf), sizeof(size), iterator);
+	pass__(pBufFull, INFO);
+	return;
 }
 
 Mad::~Mad() {

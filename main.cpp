@@ -17,6 +17,7 @@
 #include "WriteDataToFile.h"
 #include "gpio_overload.h"
 #include "sys/poll.h"
+#include <sys/ioctl.h>
 #include <exception>
 
 using namespace std;
@@ -28,7 +29,6 @@ int main(int argc, char* argv[]) {
 	std::string nameFileConfig = FILE_CONFIG_MAD;	//содержит имя конфигурационного файла Мада
 	if (!(argc > 0 && argc < 4))
 		return 1;
-	int recBuf[SIZE_REC_BUF]; //приёмный буфер
 	int sock;	//сокет МАД
 	//инициализация адреса МАД
 	sockaddr_in addrMad;
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
 	cout << "Создан объект класса SinkAdcData" << std::endl;
 	mad_n::ManagerAlg manager(&sink, mad_n::Sender::pass);
 	cout << "Создан объект класса ManagerAlg" << std::endl;
-	Mad mad(sock, mad_n::Sender::pass, &manager, &sink, nameFileConfig);
+	Mad mad(mad_n::Sender::pass, &manager, &sink, nameFileConfig);
 	cout << "Создан объект класса Mad" << std::endl;
 
 	//обработка командного файла
@@ -118,11 +118,17 @@ int main(int argc, char* argv[]) {
 		}
 		if (fds[1].revents & POLLIN) {
 			sockaddr_in srcAddr;
-			size_t size = sizeof(srcAddr);
-			unsigned len = recvfrom(sock, reinterpret_cast<void *>(recBuf),
-					sizeof(recBuf), 0, reinterpret_cast<sockaddr*>(&srcAddr),
-					&size);
-			mad.receive(len, recBuf);
+			size_t sizeAddr = sizeof(srcAddr), sizeBuf = 0;
+
+			if ( ioctl (sock,FIONREAD,&sizeBuf) < 0 )
+			{
+				perror("Применение ioctl для получения информации о размере очередной датаграмы завершилось неудачой\n");
+				exit(1);
+			}
+			PtrData pBuf(new PtrData::element_type(sizeBuf));
+			recvfrom(sock, reinterpret_cast<void *>(pBuf->data()), sizeof(pBuf->size()), 0,
+					reinterpret_cast<sockaddr*>(&srcAddr), &sizeAddr);
+			mad.receive(pBuf);
 		}
 	}
 	return 0;

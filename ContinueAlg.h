@@ -20,11 +20,11 @@ namespace mad_n {
  */
 class ContinueAlg: public Algorithm {
 	unsigned int numberOfSampl_; //количество отсчётов в одном пакете
-	datA buf_;
+	std::vector<int8_t> buf_;
 public:
 	bool open_(void);
 	void continious(void);
-	ContinueAlg(std::string name, const int& id, void (*pf)(void*, size_t, int), unsigned num = 1000);
+	ContinueAlg(std::string name, const int& id, void (*pf)(std::vector<int8_t>&, int));
 	virtual ~ContinueAlg();
 };
 

@@ -6,13 +6,13 @@
  */
 
 #include "Algorithm.h"
+#include "Mad.h"
 #include <iostream>
 
 namespace mad_n {
 
-Algorithm::Algorithm(std::string name, const int& id,
-		void (*pf)(void*, size_t, int)) :
-		name_(name), id_(id), pass__(pf) {
+Algorithm::Algorithm(std::string name, const int& id, void (*pf)(std::vector<int8_t>&, int)) :
+				name_(name), id_(id), pass__(pf) {
 	return;
 }
 
@@ -90,9 +90,17 @@ int Algorithm::get_count_queue(void) {
 	return num;
 }
 
-void Algorithm::pass_(void* pbuf, size_t size, int id_block) {
+void Algorithm::pass_(void* pbuf, size_t size, int id_block, std::shared_ptr<const DataADC> pDataBuf) {
 	wdtOut_.write(pbuf, size);
-	pass__(pbuf, size, id_block);
+	Head config = Mad::getConfig();
+	pDataBuf->get_gain(config.gain);
+	config.freq = pDataBuf->get_freq();
+	config.numAlg = id_block;
+	size_t sizeFull = sizeof(Head) + size;
+	std::vector<int8_t> pBufFull(sizeFull);
+	auto iterator = std::copy_n(reinterpret_cast<int8_t*>(&config), sizeof(config), pBufFull.begin());
+	std::copy_n(reinterpret_cast<int8_t*>(pbuf), size, iterator);
+	pass__(pBufFull, DATA);
 	return;
 }
 

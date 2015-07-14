@@ -15,6 +15,7 @@
 #include <string>
 #include <list>
 #include <boost/optional.hpp>
+#include "Collector.h"
 namespace mad_n {
 /*
  *
@@ -50,11 +51,8 @@ class Mad {
 	enum status_ans {
 		NOT_OK, OK
 	};
-	enum id_alg {
-		CONTINIOUS = 0, GASIK
-	};
+
 	const std::string name_alg_[2] = { "cont", "gas" };
-	int sock_; //ethernet socket
 	int f3_i2c_; //дескриптор файла управления акустической платой
 	int f3_spi_; //дескриптор файла приёма данных от акустической платы
 	bool isRunThreadAdc_;	//поток обработки данных АЦП запущен
@@ -63,18 +61,22 @@ class Mad {
 	const char* devSPI_ = DEV_SPI; //файл устройства SPI
 	const int FREQ_ = 528000; //частота дискретизации (в Гц)
 	const short GAIN_ = 34; //начальный коэффициент усиления для каналов (дцБ)
-	void (*pass_)(void* pbuf, size_t size, int id_block); //функция передачи данных
+	void (*pass__)(std::vector<int8_t>& pbuf, int id_block); //функция передачи данных
 	ManagerAlg *manager_;	//менеджер алгоритмов
 	SinkAdcData *sinkAdc_;	//приёмник данных от АЦП
-	Head config_;	//данные о конфигурации МАД
+	static Head config_;	//данные о конфигурации МАД
+	collector_n::Collector col_;	//коллектор пакетов данных
 	void fillConfig(std::string file);	//заполнение конфигурационных данных МАД
 	void clear_set_overload(void); //подтверждение приёма сообщения о перегрузке pga
+	void passAnswer(void* pbuf, size_t size); //функция передачи ответа на команду
+	void passInfo(void* pbuf, size_t size); //функция передачи информационного сообщения
 public:
+	static Head getConfig(void);	//возвратить структуру конфигурации МАД
 	static boost::optional<int> getMadIdFromConfigFile(const std::string& file);	//получить идентификатор МАД из конфигурационного файла
 	void post_overload(void); //сообщение МАД о перегрузке pga
 	void set_period_monitor(const unsigned& s); //установить период передачи мониторограмм
 	unsigned int get_period_monitor(void); //получить период передачи мониторограмм
-	void receive(const unsigned int& len, void* pbuf); //обработка принятых по Ethernet данных
+	void receive(PtrData pPack); //обработка принятых по Ethernet данных
 	bool sync(void); //отправка синхросигнала в драйвер АЦП
 	bool start_adc(void); //запуск АЦП преобразования
 	bool stop_adc(void); //остановка АЦП преобразования
@@ -97,8 +99,7 @@ public:
 			const int& num = WriteDataToFile::SIZE_P); //установить задание на запись данных выходной очереди алгоритма
 	void get_list_active_algoritm(std::list<std::string> *la); //получить список активных алгоритмов
 	void get_list_active_algoritm(std::list<int> *la); //получить список активных алгоритмов
-	Mad(const int& sock, void (*pf)(void*, size_t, int), ManagerAlg *m,
-			SinkAdcData *s, std::string nameFileConfig);
+	Mad(void (*pf)(std::vector<int8_t>& pbuf, int id_block), ManagerAlg *m, SinkAdcData *s, std::string nameFileConfig);
 	Mad(const Mad&) = delete;
 	Mad& operator =(const Mad&) = delete;
 	virtual ~Mad();

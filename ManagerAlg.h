@@ -15,6 +15,7 @@
 #include <future>
 #include <memory>
 #include <map>
+#include <vector>
 #include <algorithm>
 #include "DataADC.h"
 #include "SinkAdcData.h"
@@ -31,14 +32,14 @@ class Monitor {
 	const int AMOUNT_AN = 100000; //количество отсчётов, которое учитывается при расчёте статистики
 	std::chrono::steady_clock::time_point transferTime_; //время передачи мониторограммы на БЦ
 	std::chrono::seconds periodTransfer_ = std::chrono::seconds(60); //значение периода передачи мониторограмм
-	monitorogramm bufM_; //буфер, содержащий мониторограмму, предназначенную для передачи на БЦ
-	void (*pass_)(void* pbuf, size_t size, int id_block);
+	::Monitor bufM_; //буфер, содержащий мониторограмму, предназначенную для передачи на БЦ
+	void (*pass_)(std::vector<int8_t>& pbuf, int id_block);
 public:
 	void set_period(const unsigned int& s); //установить период передачи мониторограмм
 	unsigned int get_period(void); //получить период передачи мониторограмм
 	void get_statistics(int* rms, int* mean) const; //получить статистику
 	void calculation_stats(const DataADC& bData);	//вычислить статистику
-	Monitor(void (*pf)(void*, size_t, int));
+	Monitor(void (*pf)(std::vector<int8_t>&, int));
 	~Monitor() {
 		mut_.unlock();
 	}
@@ -71,7 +72,7 @@ public:
 	void set_task_out(const std::string nameAlg, const std::string& nameFile,
 			const int& num = WriteDataToFile::SIZE_P); //установить задание на запись данных выходной очереди алгоритма
 	int get_count_queue(const std::string& name); //возвратить количество элементов в очереди
-	ManagerAlg(SinkAdcData* s, void (*pf)(void*, size_t, int));
+	ManagerAlg(SinkAdcData* s, void (*pf)(std::vector<int8_t>&, int));
 	virtual ~ManagerAlg();
 };
 

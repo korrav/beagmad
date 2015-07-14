@@ -9,6 +9,7 @@
 #define DATAADC_H_
 
 #include "f3_spi.h"
+#include <cstdlib>
 
 namespace mad_n {
 
@@ -31,6 +32,7 @@ public:
 	inline adc_mode get_mode(void);
 	inline void set_gain(short* g);
 	inline void get_gain(short* g) const;
+	inline void get_gain(int32_t* g) const;
 	inline void set_freq(const int& freq);
 	inline unsigned int get_freq(void) const;
 	DataADC();
@@ -76,6 +78,12 @@ void DataADC::set_amount_init(void) {
 void DataADC::set_gain(short* g) {
 	for (short& x : gain_)
 		x = *(g++);
+	return;
+}
+
+inline void DataADC::get_gain(int32_t* g) const {
+	for (const short& x : gain_)
+		*(g++) = x;
 	return;
 }
 

@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <vector>
 #include <mutex>
 #include "wraping.h"
 
@@ -26,7 +27,7 @@ class Sender {
 	static int idPack_;	//идентификатор передаваемого пакета данных
 	static const int MAX_SIZE_PACK = 1400;	//максимальный размер передаваемого UDP пакета
 public:
-	static void pass(void* pbuf, size_t size, int id_block);
+	static void pass(std::vector<int8_t>& pbuf, int id_block);
 	Sender(const int& sock, const char* ip, const unsigned short& port,
 			const int& id);
 	static inline int getIdPack(void) {

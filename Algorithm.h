@@ -32,7 +32,7 @@ class Algorithm {
 	std::mutex mut_fifo_; //мьютекс для управления очередью
 	std::string name_; //имя алгоритма
 	int id_; //числовой идентификатор алгоритма
-	void (*pass__)(void* pbuf, size_t size, int id_block);
+	void (*pass__)(std::vector<int8_t>& pbuf, int id_block);
 	WriteDataToFile wdtOut_; // объект обеспечивающий запись выходных данных
 	WriteDataToFile wdtIn_; // объект обеспечивающий запись входных данных
 public:
@@ -53,11 +53,11 @@ public:
 			WriteDataToFile::SIZE_P); //установить задание на запись данных входной очереди алгоритма
 	void set_task_out(const std::string& nameFile, const int& num =
 			WriteDataToFile::SIZE_P); //установить задание на запись данных выходной очереди алгоритма
-	Algorithm(std::string name, const int& id, void (*pf)(void*, size_t, int));
+	Algorithm(std::string name, const int& id, void (*pf)(std::vector<int8_t>&, int));
 	virtual ~Algorithm();
 protected:
 	std::future<void> end_; //будущий результат, возвращаемый только после уничтожения потока алгоритма
-	void pass_(void* pbuf, size_t size, int id_block);
+	void pass_(void* pbuf, size_t size, int id_block, std::shared_ptr<const DataADC> pDataBuf);
 	void open__(void) { //эта функция должна быть вызвана в функции open_
 		isRunThread_ = true;
 		return;

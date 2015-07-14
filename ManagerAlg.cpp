@@ -6,12 +6,13 @@
  */
 
 #include "ManagerAlg.h"
+#include "Mad.h"
 #include <iostream>
 
 namespace mad_n {
 
-ManagerAlg::ManagerAlg(SinkAdcData* s, void (*pf)(void*, size_t, int)) :
-		supplier_(s), monitor_(pf) {
+ManagerAlg::ManagerAlg(SinkAdcData* s, void (*pf)(std::vector<int8_t>&, int)) :
+				supplier_(s), monitor_(pf) {
 	if (supplier_ == nullptr) {
 		std::cout << "Поставщик буферов данных не инициализирован\n";
 		exit(1);
@@ -38,7 +39,7 @@ void ManagerAlg::closeDistributor(void) {
 bool ManagerAlg::addAlgorithm(Algorithm* a) {
 	bool status = setA_.insert(std::make_pair(a->get_name(), a)).second;
 	std::cout << "В менеджере алгоритмов " << (status ? "" : "не ")
-			<< "установлен алгоритм " << a->get_name() << std::endl;
+					<< "установлен алгоритм " << a->get_name() << std::endl;
 	return status;
 }
 
@@ -198,7 +199,7 @@ void Monitor::calculation_stats(const DataADC& bData) {
 				mean[k] = sum[k] / AMOUNT_AN;
 				rms[k] = sqrt(
 						(sumsquares[k] - pow(sum[k], 2) / AMOUNT_AN)
-								/ (AMOUNT_AN - 1));
+						/ (AMOUNT_AN - 1));
 			}
 			for (int k = 0; k < 4; k++) {
 				sum[k] = 0;
@@ -210,16 +211,20 @@ void Monitor::calculation_stats(const DataADC& bData) {
 	}
 	if (std::chrono::steady_clock::now() >= transferTime_) {
 		transferTime_ += periodTransfer_;
-		bufM_.freq = bData.get_freq();
-		bData.get_gain(bufM_.gain);
+		Head config = Mad::getConfig();
+		config.freq = bData.get_freq();
+		bData.get_gain(config.gain);
 		get_statistics(bufM_.rms, bufM_.mean);
-		pass_(&bufM_, sizeof(bufM_), MONITOR);
+		std::vector<int8_t> buf(sizeof(Head) + sizeof(Monitor));
+		auto iterator = std::copy_n(reinterpret_cast<int8_t*>(&config), sizeof(config), buf.begin());
+		std::copy_n(reinterpret_cast<int8_t*>(&bufM_), sizeof(bufM_), iterator);
+		pass_(buf, MONITOR);
 	}
 	return;
 }
 
-Monitor::Monitor(void (*pf)(void*, size_t, int)) :
-		pass_(pf) {
+Monitor::Monitor(void (*pf)(std::vector<int8_t>&, int)) :
+				pass_(pf) {
 	transferTime_ = std::chrono::steady_clock::now() + periodTransfer_;
 	return;
 }

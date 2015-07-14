@@ -10,6 +10,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <memory>
+
+typedef std::shared_ptr<std::vector<int8_t>> PtrData;
 
 struct MarkPack {	//метка пакета
 	int id;	//уникальный номер блока данных
@@ -43,56 +46,43 @@ struct Head {
 	int32_t verAlg;	//версия алгоритма
 };
 
-
-const unsigned int NUM_SAMPL_PACK = 2000; //количество отсчётов, который может поместиться в один пакет данных
-enum id { //идентификаторы блоков данных
+enum id_block {	//идентификатор типа пакета
+	DATA,
 	COMMAND,	//блок, содержащий команду
-	ANSWER, //блок, содержащий ответ на команду
-	FILTER_ALG,	//блок данных в режиме фильтрации
-	CONTINIOUS_ALG, //блок данных в режиме непрерывной передачи
-	MONITOR, //блок мониторограммы
-	FILTER_NOISE, //блок данных, фильтрованный по превышению уровня шума
-	INFO, //блок сообщений от МАД
+	ANSWER,	//блок, содержащий ответ на команду
+	INFO	//блок сообщений от МАД
 };
 
-struct h_package { //структура, в которую оборачивается все пакеты данных, принимаемых, либо отправляемых МАД
-	int idSrc;	//идентификатор источника
-	int idBlock;	//идентификатор блока
+enum id_data {	//идентификаторы пакетов данных
+	MONITOR,	//блок мониторограммы
+	FILTER,
+	GASIK,
+	CONTINIOUS
 };
 
-struct h_pack_com { //структура, содержащая командный блок
-	h_package head; //шапка
-	int id; //идентификатор команды
+struct DataAlgorithm { //структура данных, в которую оборачиваются результаты алгоритмов по поиску нейтрино
+	unsigned int numFirstCount; //номер первого отсчёта
+	int8_t data; //первый байт данных
+};
+
+struct Monitor { //структура данных, в которую оборачиваются результаты вычисления статистики
+	int rms[4]; 	//СКО
+	int mean[4];	//математическое ожидание
+};
+
+
+struct GasikParams {
+	unsigned int level;
+};
+
+struct Gasik {
+	GasikParams param;
+	DataAlgorithm buf;
 };
 
 struct h_pack_ans { //структура, содержащая ответ на команду
 	int id; //идентификатор команды
 	int status; //результат выполнения команды (OK или NOT_OK)
-};
-
-struct datA { //структура данных, в которую оборачиваются результаты алгоритмов по поиску нейтрино
-	short gain[4];	//коэффициенты усиления каналов (в дЦб)
-	int freq;	//частота дискретизации (в Гц)
-	unsigned int numFirstCount; //номер первого отсчёта
-	int amountCount; //количество отсчётов (1 отс = 4 x 2 байт)
-	short sampl[NUM_SAMPL_PACK * 4]; //отсчёты
-};
-
-#define LAST_PACKAGE -1
-struct datAfilterNoise { //структура данных, в которую оборачиваются результаты алгоритма FILTER_NOISE
-	int num; //порядковый номер пакета в рвмках единичного блока данных, последний - LAST
-	short gain[4];	//коэффициенты усиления каналов (в дЦб)
-	int freq;	//частота дискретизации (в Гц)
-	unsigned int numFirstCount; //номер первого отсчёта
-	int amountCount; //количество отсчётов (1 отс = 4 x 2 байт)
-	short sampl[NUM_SAMPL_PACK * 4]; //отсчёты
-};
-
-struct monitorogramm { //структура данных, в которую оборачиваются результаты вычисления статистики
-	short gain[4];	//коэффициенты усиления каналов (в дЦб)
-	int freq;	//частота дискретизации (в Гц)
-	int rms[4]; 	//СКО
-	int mean[4];	//математическое ожидание
 };
 
 #endif /* WRAPING_H_ */
