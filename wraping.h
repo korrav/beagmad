@@ -80,6 +80,15 @@ struct Gasik {
 	DataAlgorithm buf;
 };
 
+struct FilterParams {
+	float sigma;
+};
+
+struct Filter {
+	FilterParams param;
+	DataAlgorithm buf;
+};
+
 struct h_pack_ans { //структура, содержащая ответ на команду
 	int id; //идентификатор команды
 	int status; //результат выполнения команды (OK или NOT_OK)

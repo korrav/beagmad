@@ -17,8 +17,7 @@ union error_adc {
 #define DEVICE_NAME "/dev/f3_spi"	//имя узла АЦП устройства
 #define DEV_CLASS_ADC "MAD - adc"	//имя класса, к которому принадлежат устройства акустического модуля
 #define SIZE_FIFO_READ 4 //размер аппаратного FIFO буфера чтения (обязательно должен быть кратен 4 и не превышать 64)
-#define BUF_SIZE 480000	//размер DMA буфера (ACNT = 2, BCNT = 2, CCNT = 60 000      x 2
-
+#define BUF_SIZE 480000	//размер DMA буфера (ACNT = 2, BCNT = 2, CCNT = 60 000      x 2)
 //РЕЖИМЫ РАБОТЫ АЦП
 enum adc_mode {
 	STOP_MODE, RUN_MODE,
@@ -29,7 +28,7 @@ struct dataUnit_ADC
 {
 	union error_adc error;		//ошибки в драйвере АЦП
 	enum adc_mode mode;     //режим работы АЦП
-	unsigned int amountCount;	//количество отсчётов в блоке данных (1 отс = 4 x 4 байт)
+	unsigned int amountCount;	//количество отсчётов в блоке данных (1 отс = 4 x 2 байт)
 	unsigned int count;			//порядковый номер первого отсчёта в блоке данных
 	short* pUnit;					//указатель на блок данных
 };

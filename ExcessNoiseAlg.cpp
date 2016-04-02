@@ -21,6 +21,7 @@ ExcessNoiseAlg::ExcessNoiseAlg(std::string name, const int& id,
 								Algorithm(name, id, pf), numFirstCount_(0), beforeEvent_(
 										INIT_BEFORE_EVENT), afterEvent_(INIT_AFTER_EVENT), sigma_(
 												INIT_SIGMA), man_(man), isEnableWriteFullBlock_(false) {
+	pBuf_ = new int8_t[sizeof(Gasik) + (MAX_BEFORE_EVENT + MAX_AFTER_EVENT) * sizeof(short)];
 }
 
 bool ExcessNoiseAlg::open_(void) {
@@ -110,13 +111,13 @@ void ExcessNoiseAlg::increase_size_buf(std::vector<short>& buf,
 void ExcessNoiseAlg::transfer_data(std::vector<short>& v,
 		const std::vector<short>::iterator& cur, const unsigned &num_sampl) {
 	std::vector<short>::iterator pt = cur, end = cur + num_sampl;
-	buf_.buf.numFirstCount = (cur - v.begin()) + numFirstCount_;
-	buf_.param.level = sigma_;
+	pBuf_->buf.numFirstCount = (cur - v.begin()) + numFirstCount_;
+	pBuf_->param.level = sigma_;
 
-	std::copy_n(cur, num_sampl, reinterpret_cast<short*>(&buf_.buf.data));
+	std::copy_n(cur, num_sampl, reinterpret_cast<short*>(&pBuf_->buf.data));
 	size_t sizeBuf = num_sampl * sizeof(short) + offsetof(Gasik, buf) + offsetof(DataAlgorithm, data);
 	if(pd_ != nullptr)
-		pass_(&buf_, sizeBuf, GASIK, pd_);
+		pass_(pBuf_, sizeBuf, GASIK, pd_);
 	return;
 
 }
@@ -145,6 +146,7 @@ void ExcessNoiseAlg::writeFullBlock(void) {
 }
 
 ExcessNoiseAlg::~ExcessNoiseAlg() {
+	delete[] reinterpret_cast<int8_t*>(pBuf_);
 }
 
 void ExcessNoiseAlg::searchIncreaseNoise(std::vector<short>::iterator& cur,

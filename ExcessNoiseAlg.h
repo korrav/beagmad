@@ -25,12 +25,14 @@ class ExcessNoiseAlg: public Algorithm {
 	class excep_out_of_algorithm { //класс, используемый для выхода из главной функции алгоритма
 	};
 	unsigned int numFirstCount_; //номер первого отсчёта в приёмном буфере
-	Gasik buf_;
+	Gasik *pBuf_;
 	const unsigned int INIT_BEFORE_EVENT = 100; //начальное значение параметра количество отсчётов до события
 	const unsigned int INIT_AFTER_EVENT = 1800; //начальное значение параметра количество отсчётов до события
 	const unsigned int INIT_SIGMA = 6; //начальное значение коэффициента превышения шумов
 	unsigned int beforeEvent_; //количество отсчётов до события
 	unsigned int afterEvent_; //количество отсчётов после события (включая момент события)
+	const int MAX_BEFORE_EVENT = 50000;
+	const int MAX_AFTER_EVENT = 50000;
 	unsigned int sigma_; //коэффициент превышения шумов (определяет необходимый уровень превышения шумов)
 	ManagerAlg* man_; //указатель на объект накопления статистики
 	mutable std::mutex mutBefAf_; //мьютекс, защищающий модификацию параметров передаваемого блока данных
@@ -68,6 +70,8 @@ inline int ExcessNoiseAlg::get_sigma(void) const {
 inline bool ExcessNoiseAlg::set_parameter_block(const unsigned int& bef,
 		const unsigned int& after) {
 	std::lock_guard<std::mutex> lk(mutBefAf_);
+	if(bef > MAX_BEFORE_EVENT || after > MAX_AFTER_EVENT)
+		return false;
 	beforeEvent_ = bef;
 	afterEvent_ = after;
 	return true;

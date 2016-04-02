@@ -11,6 +11,7 @@
 #include "SinkAdcData.h"
 #include "ContinueAlg.h"
 #include "ExcessNoiseAlg.h"
+#include "DetectionOfNeutrinos.h"
 #include "main.h"
 #include <string>
 #include <list>
@@ -52,7 +53,7 @@ class Mad {
 		NOT_OK, OK
 	};
 
-	const std::string name_alg_[2] = { "cont", "gas" };
+	const std::string name_alg_[4] = {"monit", "filter", "gas", "cont"};
 	int f3_i2c_; //дескриптор файла управления акустической платой
 	int f3_spi_; //дескриптор файла приёма данных от акустической платы
 	bool isRunThreadAdc_;	//поток обработки данных АЦП запущен
@@ -106,6 +107,7 @@ public:
 //алгоритмы
 	ContinueAlg *algCont_; //алгоритм непрерывной передачи данных
 	ExcessNoiseAlg *algExN_; //алгоритм по превышению уровня шумов
+	DetectionOfNeutrinos *algFil_; //алгоритм по выделению нейтриноподобного сигнала
 };
 
 } /* namespace mad_n */

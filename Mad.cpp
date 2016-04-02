@@ -505,6 +505,7 @@ Mad::Mad(void (*pf)(std::vector<int8_t>& pbuf, int id_block), ManagerAlg *m, Sin
 	manager_->addAlgorithm(algCont_);
 	algExN_ = new ExcessNoiseAlg(name_alg_[GASIK], GASIK, pf, manager_);
 	manager_->addAlgorithm(algExN_);
+	algFil_ = new DetectionOfNeutrinos(name_alg_[FILTER], FILTER, pf);
 	return;
 }
 
@@ -654,6 +655,8 @@ Mad::~Mad() {
 	close(f3_spi_);
 	manager_->turnOffAll();
 	delete algCont_;
+	delete algExN_;
+	delete algFil_;
 	return;
 }
 

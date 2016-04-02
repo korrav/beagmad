@@ -64,14 +64,14 @@ adc_mode DataADC::get_mode(void) {
 }
 
 void DataADC::set_amount(unsigned int amount) {
-	if (amount > BUF_SIZE / sizeof(short))
-		b_adc_.amountCount = BUF_SIZE / sizeof(short);
+	if (amount > BUF_SIZE / (4 * sizeof(short)))
+		b_adc_.amountCount = BUF_SIZE / (4 * sizeof(short));
 	else
 		b_adc_.amountCount = amount;
 	return;
 }
 void DataADC::set_amount_init(void) {
-	b_adc_.amountCount = BUF_SIZE / sizeof(short);
+	b_adc_.amountCount = BUF_SIZE / (sizeof(short) * 4);
 	return;
 }
 
